@@ -32,3 +32,5 @@ __pycache__/
 # Secrets (never commit)
 .env
 *.pem
+# Firebase — download from Firebase Console → Project settings → Your apps
+Chit Chat/GoogleService-Info.plist
