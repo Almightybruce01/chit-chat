@@ -1,0 +1,34 @@
+# Xcode / Swift
+DerivedData/
+DerivedDataLean/
+build/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# SPM
+.swiftpm/
+.build/
+
+# CocoaPods / Carthage
+Pods/
+Carthage/Build/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Python / local
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Secrets (never commit)
+.env
+*.pem

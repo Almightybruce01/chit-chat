@@ -1,0 +1,61 @@
+{
+  "runs": [
+    {
+      "generated_at": "2026-03-23T17:45:08.601991+00:00",
+      "script_title": "Close highest-priority TODO",
+      "script_type": "todo",
+      "script": {
+        "title": "Close highest-priority TODO",
+        "rationale": "Address technical debt at AI_COMPANY_SETUP.md:10.",
+        "files_to_touch": [
+          "AI_COMPANY_SETUP.md"
+        ],
+        "script_type": "todo",
+        "steps": [
+          "Open file at line",
+          "Resolve or convert to GitHub issue with acceptance criteria."
+        ],
+        "copy_paste_stub": "// Resolved: | **2** | Pulls **live trends** (Hacker News + DEV RSS), merges \u201cdepartment\u201d ins"
+      },
+      "scan_lines": 20111,
+      "scan_files": 82,
+      "trend_keywords": [
+        "your",
+        "iphone",
+        "demonstrated",
+        "running",
+        "cyber",
+        "serving",
+        "file",
+        "downloads",
+        "using",
+        "certificate",
+        "which",
+        "expired"
+      ]
+    },
+    {
+      "generated_at": "2026-03-23T17:13:40.753490+00:00",
+      "script_title": "Modularize AppState (god object reduction)",
+      "script_type": "swift_refactor",
+      "script": {
+        "title": "Modularize AppState (god object reduction)",
+        "rationale": "Chit Chat/AppState.swift is ~3,880 lines \u2014 split into FeedState, SocialState, SessionState.",
+        "files_to_touch": [
+          "Chit Chat/AppState.swift"
+        ],
+        "script_type": "swift_refactor",
+        "steps": [
+          "Create AppState+Feed.swift with feed-related @Published + methods.",
+          "Create AppState+Session.swift for user/session.",
+          "Leave AppState as facade forwarding to child stores OR use Composition."
+        ],
+        "copy_paste_stub": "// AppState+Feed.swift (new file) \u2014 example extraction\nimport Foundation\nimport SwiftUI\n\nextension AppState {\n    // Move feed/post CRUD here in a follow-up commit\n}"
+      },
+      "scan_lines": 19682,
+      "scan_files": 79,
+      "trend_keywords": []
+    }
+  ],
+  "updated_at": "2026-03-23T17:45:08.602018+00:00"
+}

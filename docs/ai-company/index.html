@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Tech Company — Command Center</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: #0f1628;
+      --text: #e9edf5;
+      --muted: #8b95ab;
+      --cyan: #38bec9;
+      --violet: #9f7aea;
+      --warn: #f6ad55;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1a2040 0%, var(--bg) 45%);
+      color: var(--text); min-height: 100vh; padding: 20px 18px 48px;
+    }
+    header { max-width: 1100px; margin: 0 auto 20px; }
+    h1 { font-size: 1.5rem; margin: 0 0 6px; letter-spacing: -0.02em; }
+    .badge { display: inline-block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
+      padding: 4px 10px; border-radius: 999px; background: rgba(159,122,234,0.2); color: var(--violet); margin-right: 6px; }
+    .sub { color: var(--muted); font-size: 0.88rem; }
+    #main { max-width: 1100px; margin: 0 auto; display: grid; gap: 14px; grid-template-columns: 1fr; }
+    @media (min-width: 900px) {
+      #main { grid-template-columns: 1fr 1fr; }
+      .span2 { grid-column: 1 / -1; }
+    }
+    .card {
+      background: var(--panel); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px; padding: 16px 18px;
+    }
+    .card h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 0 0 12px; }
+    ul { margin: 0; padding-left: 18px; }
+    li { margin: 8px 0; line-height: 1.45; }
+    .script { border-left: 3px solid var(--cyan); padding-left: 14px; }
+    .script h3 { margin: 0 0 8px; color: var(--cyan); font-size: 1.1rem; }
+    pre {
+      background: #050810; padding: 12px; border-radius: 10px; overflow: auto;
+      font-size: 0.76rem; border: 1px solid rgba(255,255,255,0.06); max-height: 220px;
+    }
+    .trend a { color: var(--cyan); text-decoration: none; }
+    .trend a:hover { text-decoration: underline; }
+    .kw { display: inline-block; margin: 3px; padding: 3px 8px; border-radius: 6px;
+      background: rgba(56,190,201,0.12); font-size: 0.78rem; color: var(--cyan); }
+    .hist { font-size: 0.82rem; color: var(--muted); max-height: 200px; overflow-y: auto; }
+    .hist div { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    footer { max-width: 1100px; margin: 24px auto 0; font-size: 0.75rem; color: var(--muted); }
+    .err { color: var(--warn); }
+    .phase { font-size: 0.7rem; color: var(--muted); margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🚀 Personal AI Tech Company</h1>
+    <p class="sub">Phases 1–3 · Scan · Trends · History · Optional LLM</p>
+    <p class="phase" id="phases"></p>
+  </header>
+  <div id="main"></div>
+  <footer>
+    Static dashboard — loads <code>latest-report.json</code> + <code>history-export.json</code> from this folder.
+    Run <code>./scripts/bootstrap-ai-company.sh</code> locally or rely on GitHub Actions.
+  </footer>
+  <script>
+    const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+    async function loadJson(name) {
+      const r = await fetch('./' + name);
+      if (!r.ok) throw new Error(name + ' ' + r.status);
+      return r.json();
+    }
+
+    function renderReport(data) {
+      const phases = data.phases || {};
+      document.getElementById('phases').textContent =
+        'P1 scan ✓ · P2 trends ' + (phases.p2_trends_collab ? '✓' : '○') +
+        ' · P3 history ✓ · LLM ' + (phases.p3_llm_enrichment ? '✓' : '○');
+
+      const mem = data.memory || {};
+      const memLines = (mem.insights || []).map(x => `<li>${esc(x)}</li>`).join('');
+      const memBlock = memLines
+        ? `<div class="card span2"><h2>Memory (Phase 3)</h2><ul>${memLines}</ul></div>`
+        : '';
+
+      const ex = (data.executive_summary || []).map(x => `<li>${esc(x)}</li>`).join('');
+      const deps = Object.entries(data.departments || {}).map(([name, o]) => {
+        const bullets = (o.bullets || []).map(b => `<li>${esc(b)}</li>`).join('');
+        return `<div class="card"><h2>${esc(name)}</h2><ul>${bullets}</ul></div>`;
+      }).join('');
+
+      const tr = data.trends || {};
+      let trendBlock = '<p class="err">Trends skipped or failed.</p>';
+      if (tr.sources && !tr.skipped) {
+        let parts = '';
+        for (const [src, payload] of Object.entries(tr.sources)) {
+          const items = (payload.items || []).slice(0, 5);
+          parts += `<h2>${esc(src)}</h2><div class="trend">`;
+          parts += items.map(it => `<div><a href="${esc(it.url)}" target="_blank" rel="noopener">${esc(it.title)}</a></div>`).join('');
+          parts += '</div>';
+        }
+        const kws = (tr.keywords || []).map(k => `<span class="kw">${esc(k)}</span>`).join('');
+        trendBlock = `<div class="card span2"><h2>Live trends (ingested)</h2>${parts}<div style="margin-top:10px">${kws}</div></div>`;
+      }
+
+      const ts = data.todays_script || {};
+      const steps = (ts.steps || []).map(s => `<li>${esc(s)}</li>`).join('');
+      const files = (ts.files_to_touch || []).map(f => `<li><code>${esc(f)}</code></li>`).join('');
+      const stub = ts.copy_paste_stub ? `<pre>${esc(ts.copy_paste_stub)}</pre>` : '';
+
+      document.getElementById('main').innerHTML = `
+        <div class="card span2"><h2>Executive summary</h2><ul>${ex}</ul>
+          ${data.llm_note ? `<p class="err">LLM: ${esc(data.llm_note)}</p>` : ''}
+        </div>
+        ${memBlock}
+        ${trendBlock}
+        <div class="span2" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;grid-column:1/-1">
+          ${deps}
+        </div>
+        <div class="card span2 script">
+          <h3>🔥 Today's one script</h3>
+          <p><strong>${esc(ts.title || '')}</strong></p>
+          <p>${esc(ts.rationale || '')}</p>
+          <p><em>Type:</em> ${esc(ts.script_type || '')}</p>
+          ${files ? `<p><em>Files:</em></p><ul>${files}</ul>` : ''}
+          ${steps ? `<p><em>Steps:</em></p><ul>${steps}</ul>` : ''}
+          ${stub}
+        </div>
+      `;
+    }
+
+    function renderHistory(hist) {
+      const runs = hist.runs || [];
+      if (!runs.length) return '';
+      const rows = runs.slice(0, 14).map(r =>
+        `<div><strong>${esc(r.generated_at || '').slice(0, 10)}</strong> — ${esc(r.script_title || '')}</div>`
+      ).join('');
+      return `<div class="card span2"><h2>Recent runs (self-improving memory)</h2><div class="hist">${rows}</div></div>`;
+    }
+
+    Promise.all([
+      loadJson('latest-report.json').catch(() => null),
+      loadJson('history-export.json').catch(() => ({ runs: [] })),
+    ]).then(([report, hist]) => {
+      const main = document.getElementById('main');
+      if (!report) {
+        main.innerHTML = '<div class="card span2 err">Missing latest-report.json. Run bootstrap script.</div>';
+        return;
+      }
+      renderReport(report);
+      main.insertAdjacentHTML('beforeend', renderHistory(hist));
+    }).catch(e => {
+      document.getElementById('main').innerHTML = `<div class="card err">${esc(e.message)}</div>`;
+    });
+  </script>
+</body>
+</html>

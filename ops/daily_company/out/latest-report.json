@@ -1,0 +1,521 @@
+{
+  "generated_at": "2026-03-23T17:45:08.597960+00:00",
+  "repo_root": "/Users/brianbruce/Desktop/Chit Chat",
+  "phases": {
+    "p1_scan": true,
+    "p2_trends_collab": true,
+    "p3_history": true,
+    "p3_llm_enrichment": true
+  },
+  "executive_summary": [
+    "Scanned 82 files, 20,111 total lines.",
+    "Git (7d commits): n/a",
+    "Today's single focus: Close highest-priority TODO",
+    "Trend keywords: your, iphone, demonstrated, running, cyber, serving"
+  ],
+  "llm_note": null,
+  "github": {
+    "remote": null,
+    "owner_repo": null,
+    "api": {}
+  },
+  "collaboration": {
+    "priority_stack": [
+      "stability",
+      "security",
+      "growth",
+      "experimentation"
+    ],
+    "active_trend_keywords": [
+      "your",
+      "iphone",
+      "demonstrated",
+      "running",
+      "cyber",
+      "serving",
+      "file",
+      "downloads"
+    ],
+    "conflict_notes": [
+      "Engineering priority: large Swift files; defer trend-chasing until refactor landed."
+    ]
+  },
+  "memory": {
+    "run_count": 1,
+    "insights": [
+      "History healthy \u2014 rotate script types for breadth."
+    ],
+    "top_script_types": [
+      "swift_refactor"
+    ],
+    "repeat_titles": []
+  },
+  "departments": {
+    "Product": {
+      "bullets": [
+        "iOS surface area: ~17,238 Swift LOC \u2014 prioritize modular splits if any file >3k lines.",
+        "Backlog signal: 114 TODO/FIXME markers in scanned files.",
+        "Competitor pattern: ship one high-retention loop daily (feed perf, cold start, or notifications)."
+      ]
+    },
+    "Engineering": {
+      "bullets": [
+        "Largest Swift modules to refactor first: Chit Chat/AppState.swift, Chit Chat/HomeView.swift, Chit Chat/ProfileView.swift.",
+        "Backend: ensure LocalBackendService boundaries \u2014 add protocol tests before Firebase scale.",
+        "Mobile: audit @MainActor + ObservableObject churn on main tab switches."
+      ]
+    },
+    "Data & AI": {
+      "bullets": [
+        "Telemetry placeholder: correlate commits (n/a in 7d) with crash-free sessions when you add logging.",
+        "Suggest: structured events for tab switches, post create funnel, reel exit."
+      ]
+    },
+    "DevOps": {
+      "bullets": [
+        "CI: enable daily report workflow + optional TestFlight nightly from main.",
+        "Cache DerivedData in CI; use xcodebuild -derivedDataPath for reproducible builds."
+      ]
+    },
+    "Security": {
+      "bullets": [
+        "Secrets: keep Firebase keys out of repo; use xcconfig + CI secrets.",
+        "Auth: review token storage in Keychain vs UserDefaults for session objects."
+      ]
+    },
+    "Growth": {
+      "bullets": [
+        "Retention: ship one shareable moment/week (Stories export, referral deep link).",
+        "ASO: align subtitle with one clear value prop from Marketing/AI-Promo-Pack."
+      ]
+    },
+    "QA": {
+      "bullets": [
+        "Add UI test: tab bar navigation + Reels exit (regression-prone).",
+        "Snapshot or unit test ranking weights if you change AppState scoring."
+      ]
+    }
+  },
+  "trends": {
+    "fetched_at": "2026-03-23T17:45:08.376357+00:00",
+    "sources": {
+      "hacker_news": {
+        "fetched_at": "2026-03-23T17:45:08.139794+00:00",
+        "items": [
+          {
+            "title": "iPhone 17 Pro Demonstrated Running a 400B LLM",
+            "url": "https://twitter.com/anemll/status/2035901335984611412",
+            "score": 206,
+            "source": "Hacker News"
+          },
+          {
+            "title": "Cyber.mil serving file downloads using TLS certificate which expired 3 days ago",
+            "url": "https://www.cyber.mil/stigs/downloads",
+            "score": 86,
+            "source": "Hacker News"
+          },
+          {
+            "title": "Trivy under attack again: Widespread GitHub Actions tag compromise secrets",
+            "url": "https://socket.dev/blog/trivy-under-attack-again-github-actions-compromise",
+            "score": 23,
+            "source": "Hacker News"
+          },
+          {
+            "title": "Show HN: Threadprocs \u2013 executables sharing one address space (0-copy pointers)",
+            "url": "https://github.com/jer-irl/threadprocs",
+            "score": 31,
+            "source": "Hacker News"
+          },
+          {
+            "title": "Bombadil: Property-based testing for web UIs",
+            "url": "https://github.com/antithesishq/bombadil",
+            "score": 170,
+            "source": "Hacker News"
+          },
+          {
+            "title": "BIO: The Bao I/O Coprocessor",
+            "url": "https://www.bunniestudios.com/blog/2026/bio-the-bao-i-o-coprocessor/",
+            "score": 13,
+            "source": "Hacker News"
+          },
+          {
+            "title": "Is it a pint?",
+            "url": "https://isitapint.com/",
+            "score": 87,
+            "source": "Hacker News"
+          },
+          {
+            "title": "An unsolicited guide to being a researcher [pdf]",
+            "url": "https://emerge-lab.github.io/papers/an-unsolicited-guide-to-good-research.pdf",
+            "score": 100,
+            "source": "Hacker News"
+          }
+        ]
+      },
+      "dev_to": {
+        "fetched_at": "2026-03-23T17:45:08.375805+00:00",
+        "items": [
+          {
+            "title": "I tuned Hindsight for long conversations",
+            "url": "https://dev.to/anjankumar_ln_41a980a9fd/i-tuned-hindsight-for-long-conversations-46k4",
+            "source": "DEV Community"
+          },
+          {
+            "title": "The Particle That Walks Through Walls \u2014 And Why Your Phone Depends On It",
+            "url": "https://dev.to/bytefluxlab/the-particle-that-walks-through-walls-and-why-your-phone-depends-on-it-53ij",
+            "source": "DEV Community"
+          },
+          {
+            "title": "Programing Concurrency",
+            "url": "https://dev.to/tavari/programing-concurrency-d9l",
+            "source": "DEV Community"
+          },
+          {
+            "title": "MCP configs are a silent security risk. I built mcp-scan to fix that.",
+            "url": "https://dev.to/rodolfboctor/mcp-configs-are-a-silent-security-risk-i-built-mcp-scan-to-fix-that-5akk",
+            "source": "DEV Community"
+          },
+          {
+            "title": "Your AI Agent Has a Dirty Secret: It Can\u2019t Log In",
+            "url": "https://dev.to/dannygerst/your-ai-agent-has-a-dirty-secret-it-cant-log-in-2bln",
+            "source": "DEV Community"
+          }
+        ]
+      }
+    },
+    "keywords": [
+      "your",
+      "iphone",
+      "demonstrated",
+      "running",
+      "cyber",
+      "serving",
+      "file",
+      "downloads",
+      "using",
+      "certificate",
+      "which",
+      "expired"
+    ]
+  },
+  "scan": {
+    "root": "/Users/brianbruce/Desktop/Chit Chat",
+    "total_files": 82,
+    "total_lines": 20111,
+    "by_language": {
+      "Swift": 17238,
+      "Python": 1113,
+      "JSON": 967,
+      "Markdown": 720,
+      "YAML": 73
+    },
+    "largest_files": [
+      {
+        "path": "Chit Chat/AppState.swift",
+        "lines": 3880,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/HomeView.swift",
+        "lines": 3164,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/ProfileView.swift",
+        "lines": 1072,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/ChatView.swift",
+        "lines": 941,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/SearchView.swift",
+        "lines": 832,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/PostView.swift",
+        "lines": 592,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/SocialMarketplaceView.swift",
+        "lines": 525,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/Models.swift",
+        "lines": 525,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/BrandKit.swift",
+        "lines": 489,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/PlatformExpansionViews.swift",
+        "lines": 488,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/LoginView.swift",
+        "lines": 439,
+        "language": "Swift"
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "lines": 410,
+        "language": "JSON"
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "lines": 410,
+        "language": "JSON"
+      },
+      {
+        "path": "Chit Chat/AppExperienceKit.swift",
+        "lines": 359,
+        "language": "Swift"
+      },
+      {
+        "path": "Chit Chat/MainTabView.swift",
+        "lines": 341,
+        "language": "Swift"
+      }
+    ],
+    "todo_hits": [
+      {
+        "path": "AI_COMPANY_SETUP.md",
+        "line": 10,
+        "snippet": "| **2** | Pulls **live trends** (Hacker News + DEV RSS), merges \u201cdepartment\u201d insights, optional **GitHub API** meta |"
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 43,
+        "snippet": "\"Backlog signal: 66 TODO/FIXME markers in scanned files.\","
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 177,
+        "snippet": "\"todo_hits\": ["
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 181,
+        "snippet": "\"snippet\": \"| **2** | Pulls **live trends** (Hacker News + DEV RSS), merges \\u201cdepartment\\u201d insights, optional **GitHub API** meta |\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 186,
+        "snippet": "\"snippet\": \"\\\"Backlog signal: 16 TODO/FIXME markers in scanned files.\\\",\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 191,
+        "snippet": "\"snippet\": \"\\\"todo_hits\\\": [\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 196,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"3. **CTO** picks **one** concrete \\\\u201ctoday\\\\u2019s script\\\\u201d (refactor / TODO / CI).\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 201,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"Codebase scanner: file counts, lines, hotspots, TODOs, git activity.\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 206,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"todo_hits: list[tuple[str, int, str]] = field(default_factory=list)\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 211,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"\\\\\\\"todo_hits\\\\\\\": [\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 216,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"for p, n, s in self.todo_hits[:40]\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 221,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"TODO_RE = re.compile(r\\\\\\\"(TODO|FIXME|HACK|XXX)(\\\\\\\\s*:|)\\\\\\\", re.I)\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 226,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"if TODO_RE.search(line):\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 231,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"result.todo_hits.append((rel, i, line.strip()))\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 236,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"\\\\\\\"TODO markers indicate unfinished work.\\\\\\\" if scan.todo_hits else \\\\\\\"No TODO/FIXME in scanned files.\\\\\\\",\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 241,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"if scan.todo_hits:\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 246,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"first = scan.todo_hits[0]\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 251,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"\\\\\\\"title\\\\\\\": \\\\\\\"Close highest-priority TODO\\\\\\\",\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 256,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"\\\\\\\"script_type\\\\\\\": \\\\\\\"todo\\\\\\\",\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 261,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"if scan.todo_hits:\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 266,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"bullets.append(f\\\\\\\"Backlog signal: {len(scan.todo_hits)} TODO/FIXME markers in scanned files.\\\\\\\")\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 271,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"bullets.append(\\\\\\\"No TODO/FIXME hits in scanned extensions \\\\u2014 good hygiene or narrow scan.\\\\\\\")\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 276,
+        "snippet": "\"snippet\": \"\\\"TODO markers indicate unfinished work.\\\"\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 281,
+        "snippet": "\"snippet\": \"- Backlog signal: 16 TODO/FIXME markers in scanned files.\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 286,
+        "snippet": "\"snippet\": \"- TODO markers indicate unfinished work.\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 291,
+        "snippet": "\"snippet\": \"Codebase scanner: file counts, lines, hotspots, TODOs, git activity.\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 296,
+        "snippet": "\"snippet\": \"todo_hits: list[tuple[str, int, str]] = field(default_factory=list)\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 301,
+        "snippet": "\"snippet\": \"\\\"todo_hits\\\": [\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 306,
+        "snippet": "\"snippet\": \"for p, n, s in self.todo_hits[:40]\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 311,
+        "snippet": "\"snippet\": \"TODO_RE = re.compile(r\\\"(TODO|FIXME|HACK|XXX)(\\\\s*:|)\\\", re.I)\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 316,
+        "snippet": "\"snippet\": \"if TODO_RE.search(line):\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 321,
+        "snippet": "\"snippet\": \"result.todo_hits.append((rel, i, line.strip()))\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 326,
+        "snippet": "\"snippet\": \"\\\"TODO markers indicate unfinished work.\\\" if scan.todo_hits else \\\"No TODO/FIXME in scanned files.\\\",\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 331,
+        "snippet": "\"snippet\": \"if scan.todo_hits:\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 336,
+        "snippet": "\"snippet\": \"first = scan.todo_hits[0]\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 341,
+        "snippet": "\"snippet\": \"\\\"title\\\": \\\"Close highest-priority TODO\\\",\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 346,
+        "snippet": "\"snippet\": \"\\\"script_type\\\": \\\"todo\\\",\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 351,
+        "snippet": "\"snippet\": \"Phase 2: Trend ingestion (no API keys) \\u2014 Hacker News, RSS-style dev headlines.\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 356,
+        "snippet": "\"snippet\": \"def fetch_hacker_news_top(n: int = 8) -> dict[str, Any]:\""
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "line": 361,
+        "snippet": "\"snippet\": \"raw = _fetch(\\\"https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty\\\")\""
+      }
+    ],
+    "git_commits_7d": null,
+    "git_last_commit": null
+  },
+  "problems": [
+    "Large Swift files increase merge conflict risk.",
+    "TODO markers indicate unfinished work."
+  ],
+  "opportunities": [
+    "Ship one measurable improvement from today's script.",
+    "Optional: set OPENAI_API_KEY for richer executive bullets."
+  ],
+  "todays_script": {
+    "title": "Close highest-priority TODO",
+    "rationale": "Address technical debt at AI_COMPANY_SETUP.md:10.",
+    "files_to_touch": [
+      "AI_COMPANY_SETUP.md"
+    ],
+    "script_type": "todo",
+    "steps": [
+      "Open file at line",
+      "Resolve or convert to GitHub issue with acceptance criteria."
+    ],
+    "copy_paste_stub": "// Resolved: | **2** | Pulls **live trends** (Hacker News + DEV RSS), merges \u201cdepartment\u201d ins"
+  },
+  "expected_impact": {
+    "performance": "Focused refactors reduce compile time and state churn.",
+    "ux": "Smaller views = fewer SwiftUI regressions.",
+    "revenue": "Faster iteration on monetization experiments.",
+    "scalability": "Modular state scales with contributors."
+  }
+}

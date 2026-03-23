@@ -1,0 +1,21 @@
+{
+  "launch_prompts": [
+    "Ultra-realistic animal portrait in cinematic lighting, social media ad style, shallow depth of field, premium color grading, 4k detail, no text",
+    "Stylized heroic character in futuristic city at dusk, neon reflections, high detail textures, premium mobile app campaign art, no text",
+    "Split-scene composition: left side playful animals, right side futuristic digital character creators, hyper-real ad visual, clean background, no logos, no text",
+    "Corporate professional workspace with sleek dashboards and modern networking visuals, premium tech brand campaign, realistic lighting, no text",
+    "Futuristic social app launch artwork with dynamic motion trails, realistic portraits, cinematic contrast, editorial quality, no text"
+  ],
+  "intro_carousel_prompts": [
+    "Instagram carousel cover, futuristic social platform vibe, premium gradient, realistic portrait subject, no text",
+    "Feature slide visual: reels and short videos, realistic camera frame, modern UI-inspired composition, no text",
+    "Feature slide visual: messaging and communities, human connection scene, modern social aesthetics, no text",
+    "Feature slide visual: corporate networking and jobs, executive profile style, premium minimal look, no text",
+    "Final CTA slide visual, powerful futuristic social brand look, realistic cinematic mood, no text"
+  ],
+  "thumbnail_prompts": [
+    "Close-up animal eye macro shot, cinematic focus, high contrast, ad-ready",
+    "Futuristic character portrait with rim lighting, editorial quality",
+    "Minimal business profile portrait with dark luxury background, professional style"
+  ]
+}
