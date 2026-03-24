@@ -1,6 +1,6 @@
-# Chit Chat - Elite Social Platform (MVP Foundation)
+# Chit Chat Social - Elite Social Platform (MVP Foundation)
 
-Chit Chat is a social app concept focused on creator content, direct messaging, conference calls, live DJ rooms, and strong moderation defaults.
+Chit Chat Social is a social app concept focused on creator content, direct messaging, conference calls, live DJ rooms, and strong moderation defaults.
 
 ## Current MVP Foundation
 
@@ -11,10 +11,15 @@ Chit Chat is a social app concept focused on creator content, direct messaging, 
   - Right: Direct message mode
 - Tab layout:
   - Home
-  - Chat
-  - Post
   - Search
+  - Create (posts & reels)
+  - Reels
   - Profile
+
+## Repository scope (keep projects separate)
+
+- **Chit Chat Social** lives in its **own** GitHub repo (`chit-chat`). That keeps it isolated from other apps (different Firebase projects, bundle IDs, and marketing sites).
+- Using GitHub for source control and optional **GitHub Pages** for repo docs is fine; just attach **this** repo’s Pages to **this** repo’s URL — don’t point another product’s custom domain here unless you mean to.
 - Chat room prototypes:
   - 1-on-1 call
   - Group call + DJ mode
@@ -73,7 +78,7 @@ Chit Chat is a social app concept focused on creator content, direct messaging, 
 ```bash
 git init
 git add .
-git commit -m "Initial Chit Chat MVP foundation"
+git commit -m "Initial Chit Chat Social MVP foundation"
 git branch -M main
 git remote add origin https://github.com/<your-username>/<repo-name>.git
 git push -u origin main

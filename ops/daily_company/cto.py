@@ -1,10 +1,13 @@
-"""CTO agent: picks exactly ONE highest-ROI improvement — deduped against history + trend-aware."""
+"""CTO agent: picks exactly ONE highest-ROI improvement — deduped, trend-aware, elite priority scoring."""
 
 from __future__ import annotations
 
 from typing import Any
 
 from .scanner import ScanResult
+
+# Elite ROI weights: stability/security > refactor > todo > ux > devops > ops
+ROI_WEIGHTS = {"security": 1.0, "swift_refactor": 0.95, "todo": 0.9, "ux": 0.85, "devops": 0.75, "ops": 0.6}
 
 
 def _candidates(scan: ScanResult, trend_keywords: list[str]) -> list[dict[str, Any]]:
@@ -51,7 +54,7 @@ def _candidates(scan: ScanResult, trend_keywords: list[str]) -> list[dict[str, A
             {
                 "title": "Extract HomeView sections into child views",
                 "rationale": f"{biggest.path} exceeds maintainability threshold — extract Feed, Stories, Composer.",
-                "files_to_touch": [biggest.path, "Chit Chat/HomeFeedSection.swift (new)"],
+                "files_to_touch": [biggest.path, "Chit Chat Social/HomeFeedSection.swift (new)"],
                 "script_type": "swift_refactor",
                 "steps": [
                     "Move feed Group { ... } into HomeFeedSection.swift",
@@ -85,7 +88,7 @@ def _candidates(scan: ScanResult, trend_keywords: list[str]) -> list[dict[str, A
             "rationale": "Trend or backlog: prioritize secrets & auth hygiene."
             if security_signal
             else "Default rotation when no mega-file pressure.",
-            "files_to_touch": ["Chit Chat/AppState.swift", "Chit Chat/LoginView.swift"],
+            "files_to_touch": ["Chit Chat Social/AppState.swift", "Chit Chat Social/LoginView.swift"],
             "script_type": "security",
             "steps": [
                 "Audit UserDefaults vs Keychain for sensitive values.",
@@ -108,6 +111,22 @@ def _candidates(scan: ScanResult, trend_keywords: list[str]) -> list[dict[str, A
         }
     )
 
+    # Elite: performance & accessibility
+    if any("View" in f.path for f in scan.files if f.language == "Swift"):
+        out.append(
+            {
+                "title": "Add accessibility audit: VoiceOver labels on key flows",
+                "rationale": "HIG compliance — improves App Store review readiness and inclusivity.",
+                "files_to_touch": ["Chit Chat Social/HomeView.swift", "Chit Chat Social/MainTabView.swift"],
+                "script_type": "ux",
+                "steps": [
+                    "Add .accessibilityLabel() to primary buttons (Create, Reels, Home).",
+                    "Ensure feed cards have meaningful accessibilityHint.",
+                ],
+                "copy_paste_stub": ".accessibilityLabel(\"Create post\")",
+            }
+        )
+
     return out
 
 
@@ -118,12 +137,28 @@ def select_todays_script(
 ) -> dict[str, Any]:
     recent = set(recent_script_titles or [])
     kw = list(trend_keywords or [])
-    for cand in _candidates(scan, kw):
-        if cand["title"] not in recent:
-            return cand
-    # All seen — return first anyway with note
-    c = _candidates(scan, kw)[0]
-    c["rationale"] = (c.get("rationale") or "") + " [Repeat: history shows this theme; ship a sub-task or close the loop.]"
+    candidates = _candidates(scan, kw)
+
+    # Elite: score unseen candidates by ROI weight, then pick highest
+    scored = []
+    for c in candidates:
+        if c["title"] in recent:
+            continue
+        w = ROI_WEIGHTS.get(c.get("script_type", ""), 0.5)
+        # Boost if hotspot stressed and script is refactor
+        if scan.modularity_signal == "stressed" and c.get("script_type") == "swift_refactor":
+            w *= 1.15
+        scored.append((w, c))
+
+    if scored:
+        scored.sort(key=lambda x: -x[0])
+        return scored[0][1]
+
+    # All seen — return highest-ROI with repeat note
+    scored_all = [(ROI_WEIGHTS.get(c.get("script_type", ""), 0.5), c) for c in candidates]
+    scored_all.sort(key=lambda x: -x[0])
+    c = scored_all[0][1].copy()
+    c["rationale"] = (c.get("rationale") or "") + " [Repeat: ship a sub-task or close the loop.]"
     return c
 
 

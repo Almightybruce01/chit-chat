@@ -49,6 +49,9 @@ class ScanResult:
     largest_files: list[FileStat] = field(default_factory=list)
     git_commits_7d: int | None = None
     git_last_commit: str | None = None
+    # Elite metrics
+    swift_hotspot_score: float = 0.0  # 0–100, higher = more refactor pressure
+    modularity_signal: str = "neutral"  # healthy | moderate | stressed
 
     def to_dict(self) -> dict:
         return {
@@ -66,6 +69,8 @@ class ScanResult:
             ],
             "git_commits_7d": self.git_commits_7d,
             "git_last_commit": self.git_last_commit,
+            "swift_hotspot_score": round(self.swift_hotspot_score, 1),
+            "modularity_signal": self.modularity_signal,
         }
 
 
@@ -154,5 +159,19 @@ def scan_project(root: str | Path) -> ScanResult:
                 result.git_last_commit = out.stdout.strip() or None
         except (subprocess.SubprocessError, FileNotFoundError):
             pass
+
+    # Elite: compute hotspot score (0–100) from largest Swift files + TODOs
+    swift_files = [f for f in result.files if f.language == "Swift"]
+    if swift_files:
+        max_lines = swift_files[0].lines
+        mega_count = sum(1 for f in swift_files if f.lines >= 2000)
+        todo_weight = min(20, len(result.todo_hits) * 2)
+        result.swift_hotspot_score = min(100, (mega_count * 25) + (max_lines // 100) + todo_weight)
+        if result.swift_hotspot_score >= 60 or mega_count >= 2:
+            result.modularity_signal = "stressed"
+        elif result.swift_hotspot_score >= 30:
+            result.modularity_signal = "moderate"
+        else:
+            result.modularity_signal = "healthy"
 
     return result

@@ -13,4 +13,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        run: xcodebuild -scheme "Chit Chat" -destination "generic/platform=iOS" -quiet build
+        run: xcodebuild -scheme "Chit Chat Social" -destination "generic/platform=iOS" -quiet build

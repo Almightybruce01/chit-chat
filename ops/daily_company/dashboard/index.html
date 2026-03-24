@@ -3,70 +3,565 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Tech Company — Command Center</title>
+  <meta name="theme-color" content="#070b14" />
+  <title>Chit Chat Social — Elite Command Center</title>
   <style>
     :root {
-      --bg: #070b14;
-      --panel: #0f1628;
+      --bg: #050810;
+      --panel: #0c1220;
+      --panel2: #111a2e;
       --text: #e9edf5;
       --muted: #8b95ab;
       --cyan: #38bec9;
       --violet: #9f7aea;
+      --green: #48bb78;
       --warn: #f6ad55;
+      --danger: #fc8181;
+      --border: rgba(255,255,255,0.08);
+      --glow: rgba(56,190,201,0.35);
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
-      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: radial-gradient(1200px 600px at 10% -10%, #1a2040 0%, var(--bg) 45%);
-      color: var(--text); min-height: 100vh; padding: 20px 18px 48px;
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background:
+        radial-gradient(ellipse 900px 500px at 15% -5%, rgba(56,190,201,0.12) 0%, transparent 50%),
+        radial-gradient(ellipse 800px 400px at 95% 10%, rgba(159,122,234,0.1) 0%, transparent 45%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding-bottom: 56px;
     }
-    header { max-width: 1100px; margin: 0 auto 20px; }
-    h1 { font-size: 1.5rem; margin: 0 0 6px; letter-spacing: -0.02em; }
-    .badge { display: inline-block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
-      padding: 4px 10px; border-radius: 999px; background: rgba(159,122,234,0.2); color: var(--violet); margin-right: 6px; }
-    .sub { color: var(--muted); font-size: 0.88rem; }
-    #main { max-width: 1100px; margin: 0 auto; display: grid; gap: 14px; grid-template-columns: 1fr; }
+    .shell { max-width: 1180px; margin: 0 auto; padding: 20px 18px 0; }
+    header.hero {
+      margin-bottom: 20px;
+    }
+    header.hero h1 {
+      font-size: clamp(1.35rem, 4vw, 1.75rem);
+      margin: 0 0 8px;
+      letter-spacing: -0.03em;
+      font-weight: 700;
+    }
+    header.hero .tagline {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+      max-width: 52ch;
+    }
+    .phase { font-size: 0.72rem; color: var(--muted); margin-top: 10px; font-variant-numeric: tabular-nums; }
+
+    /* Sticky nav */
+    .nav-rail {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      margin: 0 -18px 20px;
+      padding: 12px 18px;
+      background: rgba(5,8,16,0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 14px;
+    }
+    .nav-inner a {
+      color: var(--cyan);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(56,190,201,0.25);
+      background: rgba(56,190,201,0.08);
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .nav-inner a:hover { background: rgba(56,190,201,0.18); border-color: rgba(56,190,201,0.45); }
+    .nav-inner .copy-row {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .nav-inner button {
+      font: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--violet);
+      background: rgba(159,122,234,0.15);
+      color: var(--violet);
+      cursor: pointer;
+    }
+    .nav-inner button:hover { background: rgba(159,122,234,0.28); }
+    .nav-inner .hint { font-size: 0.72rem; color: var(--muted); max-width: 220px; }
+
+    section.anchor { scroll-margin-top: 88px; }
+
+    .grid-2 {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr 1fr; }
+    }
+    .span2 { grid-column: 1 / -1; }
+
+    .card {
+      background: linear-gradient(165deg, var(--panel2) 0%, var(--panel) 100%);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+    .card h2 {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted);
+      margin: 0 0 14px;
+    }
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      color: var(--text);
+    }
+    .card p, .card li { line-height: 1.55; }
+    .card ul { margin: 0; padding-left: 18px; }
+    .card li { margin: 8px 0; }
+
+    .elite-admin {
+      border: 1px solid rgba(56,190,201,0.35);
+      box-shadow: 0 0 0 1px rgba(56,190,201,0.08), 0 12px 48px rgba(0,0,0,0.4);
+      background:
+        linear-gradient(135deg, rgba(56,190,201,0.14) 0%, transparent 45%),
+        linear-gradient(165deg, var(--panel2) 0%, var(--panel) 100%);
+    }
+    .elite-admin .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .pill {
+      display: inline-block;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(72,187,120,0.15);
+      color: var(--green);
+      border: 1px solid rgba(72,187,120,0.35);
+    }
+    .pill.warn { background: rgba(246,173,85,0.12); color: var(--warn); border-color: rgba(246,173,85,0.35); }
+
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+    }
+    .steps li {
+      position: relative;
+      padding-left: 44px;
+      margin: 14px 0;
+      min-height: 36px;
+    }
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 10px;
+      background: rgba(56,190,201,0.2);
+      color: var(--cyan);
+      font-weight: 800;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(56,190,201,0.4);
+    }
+    .steps strong { color: var(--text); }
+
+    .link-grid {
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    .link-grid a {
+      display: block;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: transform 0.12s, border-color 0.12s, background 0.12s;
+    }
+    .link-grid a:hover {
+      border-color: rgba(159,122,234,0.45);
+      background: rgba(159,122,234,0.1);
+      transform: translateY(-1px);
+    }
+    .link-grid a span {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+
+    #main { max-width: 1180px; margin: 0 auto; padding: 0 18px; display: grid; gap: 14px; grid-template-columns: 1fr; }
     @media (min-width: 900px) {
       #main { grid-template-columns: 1fr 1fr; }
-      .span2 { grid-column: 1 / -1; }
     }
-    .card {
-      background: var(--panel); border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 16px; padding: 16px 18px;
-    }
-    .card h2 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 0 0 12px; }
-    ul { margin: 0; padding-left: 18px; }
-    li { margin: 8px 0; line-height: 1.45; }
-    .script { border-left: 3px solid var(--cyan); padding-left: 14px; }
-    .script h3 { margin: 0 0 8px; color: var(--cyan); font-size: 1.1rem; }
+    #main .span2 { grid-column: 1 / -1; }
+
+    .script { border-left: 3px solid var(--cyan); padding-left: 16px; }
+    .script h3 { color: var(--cyan); }
     pre {
-      background: #050810; padding: 12px; border-radius: 10px; overflow: auto;
-      font-size: 0.76rem; border: 1px solid rgba(255,255,255,0.06); max-height: 220px;
+      background: #03060c;
+      padding: 14px;
+      border-radius: 12px;
+      overflow: auto;
+      font-size: 0.74rem;
+      border: 1px solid var(--border);
+      max-height: 240px;
     }
     .trend a { color: var(--cyan); text-decoration: none; }
     .trend a:hover { text-decoration: underline; }
-    .kw { display: inline-block; margin: 3px; padding: 3px 8px; border-radius: 6px;
-      background: rgba(56,190,201,0.12); font-size: 0.78rem; color: var(--cyan); }
+    .kw {
+      display: inline-block;
+      margin: 3px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(56,190,201,0.12);
+      font-size: 0.78rem;
+      color: var(--cyan);
+    }
     .hist { font-size: 0.82rem; color: var(--muted); max-height: 200px; overflow-y: auto; }
     .hist div { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-    footer { max-width: 1100px; margin: 24px auto 0; font-size: 0.75rem; color: var(--muted); }
     .err { color: var(--warn); }
-    .phase { font-size: 0.7rem; color: var(--muted); margin-top: 8px; }
+    footer.shell {
+      margin-top: 28px;
+      padding: 0 18px;
+      font-size: 0.75rem;
+      color: var(--muted);
+      max-width: 1180px;
+    }
+    footer.shell code { font-size: 0.85em; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--panel2);
+      border: 1px solid var(--green);
+      color: var(--green);
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.25s, opacity 0.25s;
+      z-index: 100;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* PIN gate — casual privacy on public Pages; code is visible in repo source */
+    body.pin-locked #dashboard-root { display: none !important; }
+    body:not(.pin-locked) #pin-gate { display: none !important; }
+    .pin-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse 80% 60% at 50% 20%, rgba(56,190,201,0.15) 0%, var(--bg) 55%);
+    }
+    .pin-card {
+      width: min(360px, 92vw);
+      padding: 28px 24px;
+      border-radius: 20px;
+      border: 1px solid rgba(56,190,201,0.35);
+      background: linear-gradient(165deg, var(--panel2) 0%, var(--panel) 100%);
+      box-shadow: 0 16px 64px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .pin-card h2 { margin: 0 0 8px; font-size: 1.25rem; }
+    .pin-card p { margin: 0 0 16px; color: var(--muted); font-size: 0.88rem; }
+    #pin-input {
+      width: 100%;
+      font-size: 1.5rem;
+      letter-spacing: 0.4em;
+      text-align: center;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #03060c;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    #pin-submit {
+      margin-top: 14px;
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--cyan), #2a9d8f);
+      color: #050810;
+    }
+    #pin-submit:hover { filter: brightness(1.08); }
+    .btn-logout {
+      font: inherit;
+      font-size: 0.72rem;
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(252,129,129,0.45);
+      background: rgba(252,129,129,0.12);
+      color: var(--danger);
+      cursor: pointer;
+    }
+    .btn-logout:hover { background: rgba(252,129,129,0.22); }
   </style>
 </head>
-<body>
-  <header>
-    <h1>🚀 Personal AI Tech Company</h1>
-    <p class="sub">Phases 1–3 · Scan · Trends · History · Optional LLM</p>
-    <p class="phase" id="phases"></p>
-  </header>
-  <div id="main"></div>
-  <footer>
-    Static dashboard — loads <code>latest-report.json</code> + <code>history-export.json</code> from this folder.
-    Run <code>./scripts/bootstrap-ai-company.sh</code> locally or rely on GitHub Actions.
+<body class="pin-locked">
+  <div id="pin-gate" role="dialog" aria-modal="true" aria-labelledby="pin-title">
+    <div class="pin-card">
+      <h2 id="pin-title">Chit Chat Social</h2>
+      <p>Enter your 4-digit access code</p>
+      <input id="pin-input" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Access code" />
+      <button type="button" id="pin-submit">Unlock dashboard</button>
+      <p id="pin-error" class="err" style="margin-top:12px" hidden>Incorrect code. Try again.</p>
+    </div>
+  </div>
+
+  <div id="dashboard-root">
+  <div class="shell">
+    <header class="hero">
+      <h1>Chit Chat Social — Elite Command Center</h1>
+      <p class="tagline">
+        One hub: <strong>iOS admin</strong>, <strong>App Store / Firebase</strong> links,
+        <strong>AI product suggestions</strong> (code self-diagnosis + optional user signals + OpenAI),
+        and the <strong>daily pipeline</strong> when <code>latest-report.json</code> is beside this page.
+      </p>
+      <p class="phase" id="phases">Loading pipeline status…</p>
+    </header>
+  </div>
+
+  <nav class="nav-rail" aria-label="Primary">
+    <div class="nav-inner">
+      <a href="#admin">Admin (verify &amp; users)</a>
+      <a href="#links">Quick links</a>
+      <a href="#cursor">Desktop &amp; Cursor</a>
+      <a href="#pipeline">AI pipeline</a>
+      <div class="copy-row">
+        <button type="button" id="copyDash">Copy dashboard link</button>
+        <button type="button" id="copyAdmin">Copy #admin link</button>
+        <button type="button" id="copyCursor">Copy #cursor link</button>
+        <button type="button" id="copyPublic" title="GitHub Pages URL">Copy public URL</button>
+        <button type="button" class="btn-logout" id="pin-logout">Lock</button>
+        <span class="hint">Deep links: <code>#admin</code> · <code>#cursor</code> · <code>#pipeline</code></span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="shell">
+    <section id="admin" class="anchor grid-2">
+      <div class="card elite-admin span2">
+        <div class="badge-row">
+          <span class="pill">Implemented in iOS app</span>
+          <span class="pill warn">Web = guide only — real controls are in the app</span>
+        </div>
+        <h2>Auto verification &amp; user control</h2>
+        <p style="margin:0 0 12px;font-size:0.95rem;">
+          This is <strong>already built</strong> into <strong>Chit Chat Social</strong> as <code>AdminDashboardView</code>.
+          The website cannot read your user database; open the app on a device or Simulator while signed in as an admin.
+        </p>
+        <h3>What you can do (in the app)</h3>
+        <ul>
+          <li><strong>Auto verification</strong> — Toggle “auto-approve when IG signal is attached” and tap <strong>Run auto-verify now</strong>.</li>
+          <li><strong>Verify manually</strong> — <strong>Queue</strong> tab: approve or decline each request; optional reviewer note.</li>
+          <li><strong>Search all users</strong> — <strong>Users</strong> tab + search field (username, display name, handle).</li>
+          <li><strong>Change names</strong> — Per user: edit <strong>New username</strong> → <strong>Save username</strong>.</li>
+          <li><strong>Delete</strong> — <strong>Delete user</strong> removes them from the <em>local</em> directory (not Firebase Auth by itself).</li>
+          <li><strong>Grant badges</strong> — <strong>Grant Real Verify</strong> / paid flow where applicable.</li>
+        </ul>
+        <h3>How to open it (step by step)</h3>
+        <ol class="steps">
+          <li><strong>Create or use an account</strong> whose username is one of:
+            <code>almighty_bruce_</code>, <code>admin</code>, or <code>owner</code> (lowercase).</li>
+          <li><strong>Sign in</strong> to Chit Chat Social on iPhone or Simulator.</li>
+          <li>Go to <strong>Profile</strong> → scroll to settings → tap <strong>Chit Chat Social admin</strong><br />
+            <em>or</em> switch to <strong>Corporate</strong> mode → <strong>Open Chit Chat Social admin</strong>.</li>
+          <li>Use the segmented control: <strong>Queue</strong> (verification + auto-verify), <strong>Users</strong> (search / rename / delete), <strong>Jobs</strong>, etc.</li>
+        </ol>
+        <p style="margin:16px 0 0;font-size:0.85rem;color:var(--muted);">
+          Code reference: <code>AppState.canAccessInternalDashboard</code> · <code>PlatformExpansionViews.swift</code> · navigation title <strong>Chit Chat Social Admin</strong>.
+        </p>
+      </div>
+    </section>
+
+    <section id="links" class="anchor" style="margin-top:22px;">
+      <div class="card span2">
+        <h2>Quick links — ship &amp; operate</h2>
+        <div class="link-grid">
+          <a href="https://appstoreconnect.apple.com" target="_blank" rel="noopener">App Store Connect<span>Builds, metadata, review, TestFlight</span></a>
+          <a href="https://console.firebase.google.com" target="_blank" rel="noopener">Firebase Console<span>Auth users, Firestore, rules</span></a>
+          <a href="https://github.com/Almightybruce01/chit-chat/blob/main/APP_STORE_UPLOAD.md" target="_blank" rel="noopener">APP_STORE_UPLOAD.md<span>Full submission checklist on GitHub</span></a>
+          <a href="https://github.com/Almightybruce01/chit-chat" target="_blank" rel="noopener">Repository<span>Source of truth</span></a>
+          <a href="https://github.com/Almightybruce01/chit-chat/actions" target="_blank" rel="noopener">GitHub Actions<span>Daily company pipeline</span></a>
+          <a href="https://almightybruce01.github.io/chit-chat/" target="_blank" rel="noopener">GitHub Pages (site root)<span>Redirects to dashboard</span></a>
+          <a href="https://almightybruce01.github.io/chit-chat/ai-company/" target="_blank" rel="noopener">Public dashboard<span>Bookmark this — PIN required after load</span></a>
+        </div>
+        <p style="margin:14px 0 0;font-size:0.82rem;color:var(--muted);">
+          <strong>Direct link to this dashboard file in the repo:</strong><br />
+          <a href="https://github.com/Almightybruce01/chit-chat/blob/main/ops/daily_company/dashboard/index.html" target="_blank" rel="noopener" style="color:var(--cyan);">
+            github.com/…/ops/daily_company/dashboard/index.html
+          </a>
+          — use <strong>Raw</strong> or clone locally; for live JSON reports, serve this folder (see footer).
+        </p>
+      </div>
+    </section>
+
+    <section id="cursor" class="anchor" style="margin-top:22px;">
+      <div class="card span2 elite-admin">
+        <h2>Where this lives on your Mac · Cursor workflow</h2>
+        <h3>Public dashboard (bookmark this)</h3>
+        <p style="margin:0 0 12px;font-size:0.92rem">
+          After GitHub Pages is on (<code>/docs</code> from <code>main</code>), your live URL is:<br />
+          <a href="https://almightybruce01.github.io/chit-chat/ai-company/" target="_blank" rel="noopener" style="color:var(--cyan);font-weight:600">https://almightybruce01.github.io/chit-chat/ai-company/</a><br />
+          Use the nav button <strong>Copy public URL</strong> or the repo file <code>docs/Chit Chat Social Dashboard.webloc</code> (double-click on Mac, then drag shortcut to Desktop). Enter PIN <strong>5505</strong> to unlock; tap <strong>Lock</strong> when done.
+        </p>
+        <h3>Paths (Finder or Cursor → File → Open)</h3>
+        <ul>
+          <li><strong>Project root:</strong> <code>/Users/brianbruce/Desktop/Chit Chat Social/</code></li>
+          <li><strong>This dashboard (HTML):</strong> <code>Chit Chat Social/ops/daily_company/dashboard/index.html</code></li>
+          <li><strong>Generated reports:</strong> <code>ops/daily_company/out/latest-report.json</code></li>
+          <li><strong>Optional user / feedback signals for the AI</strong> (copy example, then edit):<br />
+            <code>ops/daily_company/data/user_signals.json.example</code> → save as <code>user_signals.json</code> (gitignored)</li>
+        </ul>
+        <h3>Use the dashboard (every time)</h3>
+        <ol class="steps">
+          <li><strong>Regenerate the report</strong> from the repo root:<br />
+            <code>./scripts/bootstrap-ai-company.sh</code><br />
+            or: <code>PYTHONPATH=ops python3 -m daily_company --root .</code><br />
+            (Set <code>OPENAI_API_KEY</code> in your shell or GitHub Actions for full executive + <strong>product update</strong> LLM blocks.)</li>
+          <li><strong>Refresh JSON next to this HTML</strong> — the bootstrap script copies <code>latest-report.json</code> into <code>ops/daily_company/dashboard/</code>.</li>
+          <li><strong>Open the dashboard in a browser</strong> — from <code>ops/daily_company/dashboard/</code> run:<br />
+            <code>python3 -m http.server 8765</code> → visit <code>http://localhost:8765/</code> (or <code>http://localhost:8765/#pipeline</code> for the report).</li>
+          <li>Read <strong>Product intelligence</strong> in the pipeline section: self-diagnosis from the codebase scan + your <code>user_signals.json</code> + suggested updates.</li>
+        </ol>
+        <h3>Improve the app after using Cursor</h3>
+        <ol class="steps">
+          <li>In <strong>Cursor</strong>, open the folder <code>Chit Chat Social</code> as the workspace root.</li>
+          <li>Use <strong>Agent</strong> or <strong>Composer</strong> with a <em>single</em> goal per session (e.g. “Implement suggestion #2 from latest-report product block” or “Reduce TODOs in AppState”).</li>
+          <li>Apply changes → <strong>build in Xcode</strong> → fix compile errors before the next ask.</li>
+          <li><strong>Commit</strong> small, reviewable slices; push so GitHub Actions can run the daily report if configured.</li>
+          <li><strong>Re-run</strong> <code>python3 -m daily_company</code> and reload the dashboard — hotspot score, TODO count, and AI suggestions should reflect progress.</li>
+          <li>Optionally paste <strong>TestFlight / review quotes</strong> (no PII) into <code>user_signals.json</code> so the next run ties product ideas to real feedback.</li>
+        </ol>
+        <p style="margin:14px 0 0;font-size:0.82rem;color:var(--muted);">
+          Online copy (if GitHub Pages is enabled): reports are published under <code>docs/ai-company/</code>; same relative JSON loading applies.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <section id="pipeline" class="anchor" style="scroll-margin-top:88px;">
+    <div id="main"></div>
+  </section>
+
+  <footer class="shell">
+    <strong>AI pipeline</strong> — this page loads <code>latest-report.json</code> and <code>history-export.json</code> from the <em>same folder</em> as this HTML file.
+    From repo root: <code>cd ops/daily_company/dashboard &amp;&amp; python3 -m http.server 8765</code> then open
+    <code>http://localhost:8765/</code> (the pipeline section will populate). GitHub’s file viewer does not run those fetches.
+    <br /><br />
+    Chit Chat Social · Elite Command Center · <button type="button" class="btn-logout" id="pin-logout-footer">Lock dashboard</button>
   </footer>
+
+  <div id="toast" class="toast" role="status">Copied</div>
+
+  </div><!-- #dashboard-root -->
+
   <script>
     const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const PIN_STORAGE = 'ccs_cmd_unlock_v1';
+    const PIN_EXPECTED = '5505';
+    const PUBLIC_DASH_URL = 'https://almightybruce01.github.io/chit-chat/ai-company/';
+
+    function mainDashboard() {
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard')).catch(() => fallbackCopy(text));
+      } else fallbackCopy(text);
+    }
+    function fallbackCopy(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); showToast('Copied'); } catch (e) { showToast('Copy failed'); }
+      document.body.removeChild(ta);
+    }
+
+    document.getElementById('copyDash').addEventListener('click', () => {
+      copyText(window.location.href.split('#')[0]);
+    });
+    document.getElementById('copyAdmin').addEventListener('click', () => {
+      const base = window.location.href.split('#')[0];
+      copyText(base + '#admin');
+    });
+    document.getElementById('copyCursor').addEventListener('click', () => {
+      const base = window.location.href.split('#')[0];
+      copyText(base + '#cursor');
+    });
+    document.getElementById('copyPublic').addEventListener('click', () => {
+      copyText(PUBLIC_DASH_URL);
+    });
+
+    function lockDashboard() {
+      sessionStorage.removeItem(PIN_STORAGE);
+      window.location.reload();
+    }
+    document.getElementById('pin-logout').addEventListener('click', lockDashboard);
+    document.getElementById('pin-logout-footer').addEventListener('click', lockDashboard);
+
+    if (['#admin', '#links', '#cursor', '#pipeline'].includes(window.location.hash)) {
+      setTimeout(() => {
+        const el = document.querySelector(window.location.hash);
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
 
     async function loadJson(name) {
       const r = await fetch('./' + name);
@@ -74,11 +569,46 @@
       return r.json();
     }
 
+    function renderProductIntelBlock(data) {
+      const pi = data.product_intelligence;
+      if (!pi) return '';
+      const sd = pi.self_diagnosis || {};
+      const diag = (sd.summary_lines || []).map(x => `<li>${esc(x)}</li>`).join('');
+      const sug = (pi.update_suggestions || []).map(x => `<li>${esc(x)}</li>`).join('');
+      const note = pi.suggestions_note ? `<p class="err">Product suggestions LLM: ${esc(pi.suggestions_note)}</p>` : '';
+      const src = pi.sources || {};
+      const badge = src.llm_product_suggestions
+        ? '<span class="pill" style="margin-bottom:10px;display:inline-block">LLM product suggestions</span>'
+        : '<span class="pill warn" style="margin-bottom:10px;display:inline-block">Heuristic suggestions (set OPENAI_API_KEY for AI)</span>';
+      const us = pi.user_signals || {};
+      const hasUser = (us.top_user_pain_points && us.top_user_pain_points.length) ||
+        (us.feature_requests && us.feature_requests.length);
+      const userHint = hasUser
+        ? '<p style="font-size:0.85rem;color:var(--muted)">User signals file is included in this run.</p>'
+        : '<p style="font-size:0.85rem;color:var(--muted)">Tip: add <code>ops/daily_company/data/user_signals.json</code> (copy from <code>user_signals.json.example</code>) to ground ideas in feedback.</p>';
+      return `<div id="product-ai" class="card span2 elite-admin">
+        ${badge}
+        <h2>Product intelligence — self-diagnosis &amp; update ideas</h2>
+        <p style="margin:0 0 12px;font-size:0.9rem">Automated <strong>codebase health</strong> plus optional <strong>user_signals.json</strong> and (when <code>OPENAI_API_KEY</code> is set) an LLM pass for concrete update priorities.</p>
+        ${userHint}
+        <h3>Self-diagnosis (from scan)</h3>
+        <ul>${diag || '<li>No summary lines.</li>'}</ul>
+        <h3>Suggested updates</h3>
+        <ul>${sug || '<li>No suggestions.</li>'}</ul>
+        ${note}
+      </div>`;
+    }
+
     function renderReport(data) {
       const phases = data.phases || {};
+      const pi = data.product_intelligence || {};
+      const psrc = pi.sources || {};
+      const prodLine = psrc.llm_product_suggestions ? ' · Product LLM ✓' : ' · Product hints (scan+user)';
       document.getElementById('phases').textContent =
-        'P1 scan ✓ · P2 trends ' + (phases.p2_trends_collab ? '✓' : '○') +
-        ' · P3 history ✓ · LLM ' + (phases.p3_llm_enrichment ? '✓' : '○');
+        'Pipeline · P1 scan ✓ · P2 trends ' + (phases.p2_trends_collab ? '✓' : '○') +
+        ' · P3 history ✓ · Exec LLM ' + (phases.p3_llm_enrichment ? '✓' : '○') + prodLine;
+
+      const productBlock = renderProductIntelBlock(data);
 
       const mem = data.memory || {};
       const memLines = (mem.insights || []).map(x => `<li>${esc(x)}</li>`).join('');
@@ -112,6 +642,7 @@
       const stub = ts.copy_paste_stub ? `<pre>${esc(ts.copy_paste_stub)}</pre>` : '';
 
       document.getElementById('main').innerHTML = `
+        ${productBlock}
         <div class="card span2"><h2>Executive summary</h2><ul>${ex}</ul>
           ${data.llm_note ? `<p class="err">LLM: ${esc(data.llm_note)}</p>` : ''}
         </div>
@@ -121,7 +652,7 @@
           ${deps}
         </div>
         <div class="card span2 script">
-          <h3>🔥 Today's one script</h3>
+          <h3>Today's one script</h3>
           <p><strong>${esc(ts.title || '')}</strong></p>
           <p>${esc(ts.rationale || '')}</p>
           <p><em>Type:</em> ${esc(ts.script_type || '')}</p>
@@ -138,7 +669,7 @@
       const rows = runs.slice(0, 14).map(r =>
         `<div><strong>${esc(r.generated_at || '').slice(0, 10)}</strong> — ${esc(r.script_title || '')}</div>`
       ).join('');
-      return `<div class="card span2"><h2>Recent runs (self-improving memory)</h2><div class="hist">${rows}</div></div>`;
+      return `<div class="card span2"><h2>Recent runs (memory)</h2><div class="hist">${rows}</div></div>`;
     }
 
     Promise.all([
@@ -147,13 +678,51 @@
     ]).then(([report, hist]) => {
       const main = document.getElementById('main');
       if (!report) {
-        main.innerHTML = '<div class="card span2 err">Missing latest-report.json. Run bootstrap script.</div>';
+        document.getElementById('phases').textContent =
+          'Pipeline · JSON not found — run bootstrap from repo (see footer). Admin section above still works.';
+        main.innerHTML = `
+          <div class="card span2 err">
+            Missing <code>latest-report.json</code> in this folder. From repo: <code>./scripts/bootstrap-ai-company.sh</code>
+            or copy from <code>ops/daily_company/out/</code>. Serve this directory over HTTP to load reports.
+          </div>
+        `;
         return;
       }
       renderReport(report);
       main.insertAdjacentHTML('beforeend', renderHistory(hist));
     }).catch(e => {
-      document.getElementById('main').innerHTML = `<div class="card err">${esc(e.message)}</div>`;
+      document.getElementById('phases').textContent = 'Pipeline · load error';
+      document.getElementById('main').innerHTML = `<div class="card span2 err">${esc(e.message)}</div>`;
+    });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (sessionStorage.getItem(PIN_STORAGE) === '1') {
+        document.body.classList.remove('pin-locked');
+        mainDashboard();
+        return;
+      }
+      const pinInput = document.getElementById('pin-input');
+      const pinErr = document.getElementById('pin-error');
+      function tryUnlock() {
+        if ((pinInput.value || '').trim() === PIN_EXPECTED) {
+          sessionStorage.setItem(PIN_STORAGE, '1');
+          document.body.classList.remove('pin-locked');
+          mainDashboard();
+        } else {
+          pinErr.hidden = false;
+          pinInput.value = '';
+          pinInput.focus();
+        }
+      }
+      document.getElementById('pin-submit').addEventListener('click', tryUnlock);
+      pinInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') tryUnlock();
+      });
+      pinInput.addEventListener('input', function () {
+        pinErr.hidden = true;
+      });
+      pinInput.focus();
     });
   </script>
 </body>

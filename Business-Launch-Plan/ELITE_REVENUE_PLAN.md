@@ -1,4 +1,4 @@
-# Chit Chat Elite Launch Plan
+# Chit Chat Social Elite Launch Plan
 
 ## 0) Non-Negotiable Principles
 

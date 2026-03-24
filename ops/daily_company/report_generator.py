@@ -15,6 +15,7 @@ from .github_remote import detect_owner_repo_from_git, fetch_repo_meta
 from .history_store import append_run, export_for_dashboard, recent_titles
 from .llm_optional import maybe_enrich_executive_summary
 from .memory_insights import analyze_history
+from .product_intelligence import build_product_intelligence, load_user_signals
 from .scanner import ScanResult, scan_project
 from .trends import aggregate_trends
 
@@ -81,6 +82,27 @@ def build_report(
         bullets, llm_err = maybe_enrich_executive_summary(base_summary, ctx_for_llm)
     exec_summary = bullets if bullets and len(bullets) >= 3 else base_summary
 
+    problems_list = [
+        "Large Swift files increase merge conflict risk."
+        if any(f.lines > 2000 for f in scan.files if f.language == "Swift")
+        else "No mega-files detected in scan scope.",
+        "TODO markers indicate unfinished work." if scan.todo_hits else "No TODO/FIXME in scanned files.",
+    ]
+    opportunities_list = [
+        "Ship one measurable improvement from today's script.",
+        "Optional: set OPENAI_API_KEY for richer executive bullets.",
+    ]
+    user_signals = load_user_signals(data_dir)
+    product_intelligence = build_product_intelligence(
+        scan.to_dict(),
+        user_signals,
+        departments,
+        script,
+        problems_list,
+        opportunities_list,
+        skip_llm,
+    )
+
     report = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "repo_root": str(root),
@@ -98,16 +120,9 @@ def build_report(
         "departments": departments,
         "trends": trends if isinstance(trends, dict) else {},
         "scan": scan.to_dict(),
-        "problems": [
-            "Large Swift files increase merge conflict risk."
-            if any(f.lines > 2000 for f in scan.files if f.language == "Swift")
-            else "No mega-files detected in scan scope.",
-            "TODO markers indicate unfinished work." if scan.todo_hits else "No TODO/FIXME in scanned files.",
-        ],
-        "opportunities": [
-            "Ship one measurable improvement from today's script.",
-            "Optional: set OPENAI_API_KEY for richer executive bullets.",
-        ],
+        "problems": problems_list,
+        "opportunities": opportunities_list,
+        "product_intelligence": product_intelligence,
         "todays_script": script,
         "expected_impact": {
             "performance": "Focused refactors reduce compile time and state churn.",
@@ -143,14 +158,19 @@ def write_outputs(
 
 def _markdown_report(r: dict[str, Any]) -> str:
     lines: list[str] = []
-    lines.append("# Daily Company Report (Phases 1–3)\n")
-    lines.append(f"_Generated: {r['generated_at']}_\n")
+    lines.append("# ⚡ Elite Daily Company Report\n")
+    lines.append(f"_Generated: {r['generated_at']}_ | _Chit Chat Social AI Company_\n")
     phases = r.get("phases", {})
     lines.append(
-        f"_Automation: P1={phases.get('p1_scan')}, P2={phases.get('p2_trends_collab')}, "
-        f"P3 history+memory={phases.get('p3_history')}, LLM={phases.get('p3_llm_enrichment')}_\n"
+        f"_Phases: P1 scan ✓ | P2 trends={'✓' if phases.get('p2_trends_collab') else '—'} | "
+        f"P3 history ✓ | LLM={'✓' if phases.get('p3_llm_enrichment') else '—'}_\n"
     )
-    lines.append("## 1. Executive Summary\n")
+    scan = r.get("scan") or {}
+    if scan.get("swift_hotspot_score") is not None:
+        sig = scan.get("modularity_signal", "neutral")
+        lines.append(f"\n**Metrics** | Hotspot: {scan['swift_hotspot_score']}/100 | Modularity: `{sig}` | "
+                     f"Files: {scan.get('total_files', '—')} | LOC: {scan.get('total_lines', 0):,}\n")
+    lines.append("\n## 1. Executive Summary\n")
     for b in r["executive_summary"]:
         lines.append(f"- {b}")
     if r.get("llm_note"):
@@ -195,9 +215,26 @@ def _markdown_report(r: dict[str, Any]) -> str:
     lines.append("\n## 7. Opportunities\n")
     for o in r["opportunities"]:
         lines.append(f"- {o}")
-    lines.append("\n## 8. TODAY'S ONE SCRIPT\n")
+    lines.append("\n## 8. Product intelligence (signals + self-diagnosis)\n")
+    pi = r.get("product_intelligence") or {}
+    sd = pi.get("self_diagnosis") or {}
+    for ln in sd.get("summary_lines", []):
+        lines.append(f"- {ln}")
+    if pi.get("update_suggestions"):
+        lines.append("\n**Suggested updates:**\n")
+        for s in pi["update_suggestions"]:
+            lines.append(f"- {s}")
+    if pi.get("suggestions_note"):
+        lines.append(f"\n_Product LLM note: {pi['suggestions_note']}_\n")
+    us = pi.get("user_signals") or {}
+    if any(us.get(k) for k in ("top_user_pain_points", "feature_requests", "analytics_notes")):
+        lines.append("\n_User signals file in use (see `ops/daily_company/data/user_signals.json`)._\n")
+
+    lines.append("\n## 9. TODAY'S ONE SCRIPT\n")
     ts = r["todays_script"]
-    lines.append(f"**{ts['title']}**\n")
+    script_type = ts.get("script_type", "")
+    lines.append(f"### {ts['title']}\n")
+    lines.append(f"`{script_type}`\n")
     lines.append(f"- Rationale: {ts['rationale']}")
     lines.append(f"- Type: {ts['script_type']}")
     if ts.get("files_to_touch"):
@@ -211,11 +248,12 @@ def _markdown_report(r: dict[str, Any]) -> str:
         lines.append("\n```")
         lines.append(ts["copy_paste_stub"])
         lines.append("```\n")
-    lines.append("## 9. Expected Impact\n")
+    lines.append("## 10. Expected Impact\n")
     for k, v in r["expected_impact"].items():
         lines.append(f"- **{k}**: {v}")
     gh = r.get("github") or {}
+    lines.append("\n---\n")
+    lines.append("*Chit Chat Social AI Company — Elite automated pipeline*\n")
     if gh.get("owner_repo"):
-        lines.append(f"\n## GitHub\n- Repo: `{gh.get('owner_repo')}`\n")
-    lines.append("\n---\n*Chit Chat AI Company — automated pipeline*\n")
+        lines.append(f"*Repo: `{gh.get('owner_repo')}`*\n")
     return "\n".join(lines)

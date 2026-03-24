@@ -33,8 +33,10 @@ def product_insights(scan: ScanResult) -> DepartmentOutput:
     else:
         bullets.append("No TODO/FIXME hits in scanned extensions — good hygiene or narrow scan.")
     bullets.append(
-        "Competitor pattern: ship one high-retention loop daily (feed perf, cold start, or notifications)."
+        "Elite pattern: ship one high-retention loop daily (feed perf, cold start, or notifications)."
     )
+    if getattr(scan, "modularity_signal", "neutral") == "stressed":
+        bullets.append("⚠️ Modularity stressed — refactor before adding new features.")
     return DepartmentOutput("Product", bullets)
 
 
@@ -43,6 +45,9 @@ def engineering_insights(scan: ScanResult) -> DepartmentOutput:
     tops = _top_swift_files(scan)
     if tops:
         bullets.append(f"Largest Swift modules to refactor first: {', '.join(tops[:3])}.")
+    hotspot = getattr(scan, "swift_hotspot_score", 0)
+    if hotspot >= 50:
+        bullets.append(f"Heat: hotspot score {hotspot:.0f}/100 — consider extraction this week.")
     bullets.append(
         "Backend: ensure LocalBackendService boundaries — add protocol tests before Firebase scale."
     )
@@ -70,6 +75,7 @@ def security_insights(scan: ScanResult) -> DepartmentOutput:
     bullets = [
         "Secrets: keep Firebase keys out of repo; use xcconfig + CI secrets.",
         "Auth: review token storage in Keychain vs UserDefaults for session objects.",
+        "Elite: rotate keys if GoogleService-Info.plist ever lived in git history.",
     ]
     return DepartmentOutput("Security", bullets)
 

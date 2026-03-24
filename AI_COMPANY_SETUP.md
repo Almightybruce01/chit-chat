@@ -15,7 +15,7 @@ Everything is automated. You only need to copy-paste these commands once.
 ## Step A — Run locally (Mac, in Terminal)
 
 ```bash
-cd "/Users/brianbruce/Desktop/Chit Chat"
+cd "/Users/brianbruce/Desktop/Chit Chat Social"
 chmod +x scripts/bootstrap-ai-company.sh scripts/daily-company-report.sh
 ./scripts/bootstrap-ai-company.sh
 ```
@@ -49,7 +49,7 @@ python3 -m daily_company --root "$(pwd)" --no-trends
 ```bash
 git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
 git add -A
-git commit -m "Chit Chat + AI Company pipeline"
+git commit -m "Chit Chat Social + AI Company pipeline"
 git push -u origin main
 ```
 

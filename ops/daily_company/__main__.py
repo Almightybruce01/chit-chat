@@ -1,5 +1,5 @@
 """
-CLI: python -m daily_company [--root PATH] [--out DIR] [--no-trends] [--no-llm]
+Elite CLI: python -m daily_company [--root PATH] [--out DIR] [--no-trends] [--no-llm]
 
 PYTHONPATH must include ./ops (see scripts/bootstrap-ai-company.sh).
 """
@@ -11,9 +11,15 @@ from pathlib import Path
 
 from .report_generator import build_report, write_outputs
 
+BANNER = """
+╔═══════════════════════════════════════════════════════════╗
+║  ⚡ Chit Chat Social AI Company — Elite Daily Report             ║
+╚═══════════════════════════════════════════════════════════╝
+"""
+
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Daily AI Tech Company — Phases 1–3")
+    ap = argparse.ArgumentParser(description="Elite Daily AI Tech Company — Phases 1–3")
     ap.add_argument("--root", type=Path, default=Path.cwd(), help="Repository root")
     ap.add_argument(
         "--out",
@@ -41,15 +47,30 @@ def main() -> None:
     data_dir = args.data or (root / "ops" / "daily_company" / "data")
     dash_export = args.dashboard_export or (out / "history-export.json")
 
+    print(BANNER)
+
     report = build_report(root, data_dir, skip_trends=args.no_trends, skip_llm=args.no_llm)
     write_outputs(report, out, data_dir, dashboard_json=dash_export)
 
-    print(f"Wrote:\n  {out / 'latest-report.json'}\n  {out / 'LATEST_REPORT.md'}\n  {data_dir / 'history.json'}")
-    print(f"  {dash_export}")
-    print("\n--- Executive summary ---")
+    scan = report.get("scan") or {}
+    if scan.get("swift_hotspot_score") is not None:
+        print(f"  Metrics: hotspot {scan['swift_hotspot_score']}/100 | modularity {scan.get('modularity_signal', '—')}")
+    print(f"\n  Wrote: {out / 'latest-report.json'}")
+    print(f"         {out / 'LATEST_REPORT.md'}")
+    print(f"         {data_dir / 'history.json'}")
+    print("\n  Executive summary:")
     for line in report["executive_summary"]:
-        print(f"  • {line}")
-    print(f"\n>>> TODAY'S ONE SCRIPT: {report['todays_script']['title']}\n")
+        print(f"    • {line}")
+    ts = report["todays_script"]
+    print(f"\n  >>> TODAY'S SCRIPT ({ts.get('script_type', 'ops')}): {ts['title']}\n")
+    pi = report.get("product_intelligence") or {}
+    sug = pi.get("update_suggestions") or []
+    if sug:
+        print("  Product update suggestions:")
+        for line in sug[:7]:
+            print(f"    • {line}")
+    if pi.get("suggestions_note"):
+        print(f"  (product LLM note: {pi['suggestions_note']})")
 
 
 if __name__ == "__main__":

@@ -16,6 +16,6 @@
 
 ## Conversion Captions
 
-1. Download Chit Chat and switch between Social + Corporate in seconds.
+1. Download Chit Chat Social and switch between Social + Corporate in seconds.
 2. Ready to post like a creator and network like a founder?
 3. Join now and build your audience with premium tools from day one.

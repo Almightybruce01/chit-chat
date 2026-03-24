@@ -12,7 +12,7 @@ Your Mac is ready: **git is initialized** and **first commit is done**.
 ## 2. Paste in Terminal (replace YOUR_USER and YOUR_REPO)
 
 ```bash
-cd "/Users/brianbruce/Desktop/Chit Chat"
+cd "/Users/brianbruce/Desktop/Chit Chat Social"
 git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
 git push -u origin main
 ```

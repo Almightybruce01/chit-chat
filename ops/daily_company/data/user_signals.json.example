@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "sessions_last_7d_estimate": null,
+  "top_user_pain_points": [
+    "Example: slow load on first open",
+    "Example: confusion switching Social vs Corporate"
+  ],
+  "feature_requests": [
+    "Example: haptic on post success"
+  ],
+  "review_snippets": [
+    "Example: Great concept — needs faster messaging"
+  ],
+  "analytics_notes": "Paste anonymized notes from Firebase Analytics, support inbox, or TestFlight feedback.",
+  "support_tickets_summary": "Optional: themes from email/support (no PII)."
+}

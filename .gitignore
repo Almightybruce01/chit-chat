@@ -1,4 +1,5 @@
 # Xcode / Swift
+**/xcuserdata/
 DerivedData/
 DerivedDataLean/
 build/
@@ -29,8 +30,11 @@ venv/
 __pycache__/
 *.pyc
 
+# Optional local product signals for AI dashboard (copy from user_signals.json.example)
+ops/daily_company/data/user_signals.json
+
 # Secrets (never commit)
 .env
 *.pem
 # Firebase — download from Firebase Console → Project settings → Your apps
-Chit Chat/GoogleService-Info.plist
+Chit Chat Social/GoogleService-Info.plist

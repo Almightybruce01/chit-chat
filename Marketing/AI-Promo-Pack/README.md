@@ -1,4 +1,4 @@
-# Chit Chat AI Promo Pack
+# Chit Chat Social AI Promo Pack
 
 This folder contains production-ready marketing copy and AI image prompt sets for:
 

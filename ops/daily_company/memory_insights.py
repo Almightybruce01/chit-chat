@@ -39,6 +39,12 @@ def analyze_history(data_dir: Path) -> dict[str, Any]:
     lines = [r.get("scan_lines", 0) for r in runs[:10] if isinstance(r.get("scan_lines"), int)]
     if len(lines) >= 2 and lines[0] > lines[-1]:
         insights.append(f"LOC grew from {lines[-1]:,} → {lines[0]:,} — consider pruning dead code weekly.")
+    if len(lines) >= 2 and lines[0] < lines[-1]:
+        insights.append(f"LOC reduced {lines[-1]:,} → {lines[0]:,} — good momentum.")
+
+    # Elite: velocity signal
+    if len(runs) >= 5:
+        insights.append(f"Run velocity: {len(runs)} reports in history — keep daily cadence.")
 
     return {
         "run_count": len(runs),
