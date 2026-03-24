@@ -1,5 +1,13 @@
 # Chit Chat Social - Elite Social Platform (MVP Foundation)
 
+## Live dashboard (GitHub Pages)
+
+**Direct link:** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/)
+
+Unlock with PIN **5505** after the page loads. Repo folder: [`docs/ai-company/`](docs/ai-company/). Enable **Settings → Pages → `/docs` on `main`** if you see a 404. Canonical reference: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
+
+---
+
 Chit Chat Social is a social app concept focused on creator content, direct messaging, conference calls, live DJ rooms, and strong moderation defaults.
 
 ## Current MVP Foundation

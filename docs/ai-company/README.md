@@ -1,26 +1,23 @@
-# AI Tech Company — public dashboard
+# Chit Chat Social — public dashboard (GitHub Pages)
 
-After the first successful **Daily AI Company Report** workflow run, this folder contains:
+This folder is **exactly** what GitHub Pages serves at:
 
-- `index.html` — dashboard UI
-- `latest-report.json` — machine-readable report
-- `LATEST_REPORT.md` — same content as Markdown
+## [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/)
 
-## Enable GitHub Pages
+| File | Role |
+|------|------|
+| `index.html` | Elite Command Center UI (PIN **5505**) |
+| `latest-report.json` | AI pipeline report data |
+| `history-export.json` | Run history for the dashboard |
+| `LATEST_REPORT.md` | Human-readable report |
 
-1. Repo **Settings → Pages**
-2. **Source**: Deploy from branch **main** (or default branch)
-3. **Folder**: `/docs`
-4. Your site: `https://<username>.github.io/<repo>/ai-company/`
+**Repo layout:** `docs/ai-company/` on branch `main` → live URL above when Pages uses **`/docs`**.
 
-If the path 404s, open `ai-company/index.html` explicitly.
-
-## Local preview
+**Update flow:** edit `ops/daily_company/dashboard/index.html` (and run the report), then:
 
 ```bash
-./scripts/daily-company-report.sh
-cp ops/daily_company/out/latest-report.json docs/ai-company/
-cp ops/daily_company/dashboard/index.html docs/ai-company/
-cd docs && python3 -m http.server 8765
-# http://localhost:8765/ai-company/
+./scripts/bootstrap-ai-company.sh
+git add docs/ai-company && git commit -m "chore: refresh dashboard" && git push
 ```
+
+See also: [`../LIVE_DASHBOARD.md`](../LIVE_DASHBOARD.md) and root [`LIVE_URLS.md`](../../LIVE_URLS.md).

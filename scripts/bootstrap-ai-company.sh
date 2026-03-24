@@ -27,6 +27,10 @@ cp -f ops/daily_company/out/latest-report.json ops/daily_company/dashboard/
 cp -f ops/daily_company/out/history-export.json ops/daily_company/dashboard/
 
 echo ""
+echo "📎 Live dashboard (GitHub Pages, repo folder docs/ai-company/):"
+echo "   https://almightybruce01.github.io/chit-chat/ai-company/"
+echo "   See docs/LIVE_DASHBOARD.md"
+echo ""
 echo "✅ Done. Next steps (once):"
 echo "  1. Create a repo on github.com (empty, no README)."
 echo "  2:  git remote add origin https://github.com/YOU/REPO.git   (create empty repo on GitHub first)"

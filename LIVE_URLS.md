@@ -8,8 +8,9 @@ This repo is **only** for the Chit Chat Social app. Keep other products in **sep
 
 ## Elite Command Center (web dashboard)
 
-- **Public site (GitHub Pages, when enabled):** `https://almightybruce01.github.io/chit-chat/ai-company/`  
-  Opens the same dashboard as in the repo; **4-digit PIN** `5505` unlocks (stored in browser until you tap **Lock** or close the tab).  
+- **Canonical live URL (bookmark this):** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) — matches **`docs/ai-company/`** in this repo on **`main`**.  
+  Also documented in **[`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md)**.
+- **4-digit PIN** `5505` unlocks (session in browser until **Lock** or tab close).  
   **Note:** On a public repo the PIN is visible in page source—it keeps casual visitors out, not determined attackers. For real access control use a private repo, Cloudflare Access, or VPN.
 - **Safari bookmark file (double-click on Mac):** `docs/Chit Chat Social Dashboard.webloc` — drag to your Desktop or Dock for one-click access to the public URL above.
 - **On your Mac (local file):** `/Users/brianbruce/Desktop/Chit Chat Social/ops/daily_company/dashboard/index.html`
