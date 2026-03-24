@@ -1,6 +1,28 @@
 {
   "runs": [
     {
+      "generated_at": "2026-03-24T19:45:23.522993+00:00",
+      "script_title": "Add security pass: Keychain review for session tokens",
+      "script_type": "security",
+      "script": {
+        "title": "Add security pass: Keychain review for session tokens",
+        "rationale": "Default rotation when no mega-file pressure. [Repeat: ship a sub-task or close the loop.]",
+        "files_to_touch": [
+          "Chit Chat Social/AppState.swift",
+          "Chit Chat Social/LoginView.swift"
+        ],
+        "script_type": "security",
+        "steps": [
+          "Audit UserDefaults vs Keychain for sensitive values.",
+          "Document threat model in ops/README.md."
+        ],
+        "copy_paste_stub": "// MARK: - Security audit notes"
+      },
+      "scan_lines": 23640,
+      "scan_files": 97,
+      "trend_keywords": []
+    },
+    {
       "generated_at": "2026-03-24T19:30:10.352452+00:00",
       "script_title": "Add security pass: Keychain review for session tokens",
       "script_type": "security",
@@ -165,5 +187,5 @@
       "trend_keywords": []
     }
   ],
-  "updated_at": "2026-03-24T19:30:10.352468+00:00"
+  "updated_at": "2026-03-24T19:45:23.523023+00:00"
 }
