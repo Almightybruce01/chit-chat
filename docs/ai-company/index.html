@@ -348,13 +348,14 @@
   </style>
 </head>
 <body class="pin-locked">
+  <!-- Public dashboard password (client-side only): 5505 — required before any data loads -->
   <div id="pin-gate" role="dialog" aria-modal="true" aria-labelledby="pin-title">
     <div class="pin-card">
       <h2 id="pin-title">Chit Chat Social</h2>
-      <p>Enter your 4-digit access code</p>
-      <input id="pin-input" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Access code" />
+      <p><strong>Password required.</strong> Enter the 4-digit dashboard password to continue. Nothing below loads until you unlock.</p>
+      <input id="pin-input" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Dashboard password" placeholder="••••" />
       <button type="button" id="pin-submit">Unlock dashboard</button>
-      <p id="pin-error" class="err" style="margin-top:12px" hidden>Incorrect code. Try again.</p>
+      <p id="pin-error" class="err" style="margin-top:12px" hidden>Wrong password. Try again.</p>
     </div>
   </div>
 
