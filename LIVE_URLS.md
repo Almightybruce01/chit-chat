@@ -2,9 +2,9 @@
 
 ## Repository (source of truth)
 
-- **Code:** `https://github.com/Almightybruce01/chit-chat`
+- **GitHub (only this project):** `https://github.com/Almightybruce01/chit-chat`
 
-This repo is **only** for the Chit Chat Social app. Keep other products in **separate** repositories so bundle IDs, Firebase, Pages, and domains never get mixed up.
+Everything in this repository is **Chit Chat Social** only — app, `docs/`, workflows, and dashboard. Other products belong in **other repos**, not here, so bundle IDs, Firebase, GitHub Pages, and domains never get mixed up.
 
 ## Elite Command Center (web dashboard)
 

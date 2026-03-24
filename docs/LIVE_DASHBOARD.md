@@ -1,5 +1,7 @@
 # Chit Chat Social — live dashboard (canonical)
 
+This file lives in **`Almightybruce01/chit-chat`** only — the Chit Chat Social project. No other products share this Pages site.
+
 **Open this URL in any browser (GitHub Pages, `main` branch, `/docs` folder):**
 
 ## [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/)
