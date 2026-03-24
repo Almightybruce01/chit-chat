@@ -1513,6 +1513,67 @@ final class AppState: ObservableObject {
         saveCredentials()
         loggedInAccountUsernames.removeAll { $0.lowercased() == key }
         saveLoggedInAccounts()
+        ReservedHandles.removeAdminHeldUsername(user.username)
+        ReservedHandles.setHandoffEmail(forUsername: user.username, email: "")
+    }
+
+    func approveAllPendingVerificationRequests() {
+        let ids = verificationRequests.filter { $0.status == .pending }.map(\.id)
+        for id in ids {
+            approveVerificationRequest(id, reviewerNote: "Bulk approved by admin.")
+        }
+    }
+
+    func adminSetVerificationForUser(userID: UUID, status: VerificationStatus) {
+        guard let idx = internalUsers.firstIndex(where: { $0.id == userID }) else { return }
+        internalUsers[idx].verificationStatus = status
+        if currentUser.id == userID {
+            currentUser.verificationStatus = status
+        }
+        syncCurrentUserInDirectory()
+    }
+
+    /// Creates a local login + directory profile (e.g. VIP placeholder). Share password securely; add handoff email in Admin user screen.
+    func adminCreatePlaceholderLocalAccount(
+        username: String,
+        displayName: String,
+        password: String,
+        grantOfficialVerifiedBadge: Bool
+    ) -> String? {
+        guard let cleaned = normalizedUsername(from: username) else {
+            return "Username must be 3+ characters (letters, numbers, . or _)."
+        }
+        if ReservedHandles.isSystemReserved(cleaned) {
+            return "That username is system-protected."
+        }
+        let key = cleaned.lowercased()
+        if internalUsers.contains(where: { $0.username.lowercased() == key }) {
+            return "That username already exists in the directory."
+        }
+        if localCredentials[key] != nil {
+            return "Login already exists for this username."
+        }
+        guard password.count >= 8 else {
+            return "Password must be at least 8 characters."
+        }
+        if !ReservedHandles.isAdminHeld(cleaned), let err = ReservedHandles.addAdminHeldUsername(cleaned) {
+            return err
+        }
+        localCredentials[key] = password
+        saveCredentials()
+        let profile = UserProfile(
+            id: UUID(),
+            username: cleaned,
+            handle: "@\(cleaned)",
+            enterpriseAlias: displayName.isEmpty ? cleaned : displayName,
+            displayName: displayName.isEmpty ? cleaned : displayName,
+            followers: 0,
+            verificationStatus: grantOfficialVerifiedBadge ? .verifiedInternal : .unverified,
+            allowEnterpriseReveal: false,
+            linkedPlatforms: []
+        )
+        internalUsers.append(profile)
+        return nil
     }
 
     /// Admin rename: updates username, @handle, optional credential key migration, and logged-in account list.
@@ -1521,8 +1582,8 @@ final class AppState: ObservableObject {
         guard let cleaned = normalizedUsername(from: rawUsername) else {
             return "Username must be 3+ characters (letters, numbers, . or _)."
         }
-        if ReservedHandles.isReserved(cleaned) {
-            return "That username is reserved."
+        if ReservedHandles.isSystemReserved(cleaned) {
+            return "That username is a protected system reserve."
         }
         let newKey = cleaned.lowercased()
         guard let idx = internalUsers.firstIndex(where: { $0.id == userID }) else {
@@ -1531,10 +1592,20 @@ final class AppState: ObservableObject {
         if internalUsers.contains(where: { $0.id != userID && $0.username.lowercased() == newKey }) {
             return "That username is already taken."
         }
+        if ReservedHandles.isAdminHeld(cleaned) {
+            ReservedHandles.removeAdminHeldUsername(cleaned)
+        }
         let oldUsername = internalUsers[idx].username
+        if ReservedHandles.isAdminHeld(oldUsername) {
+            ReservedHandles.removeAdminHeldUsername(oldUsername)
+        }
         let oldKey = oldUsername.lowercased()
         internalUsers[idx].username = cleaned
         internalUsers[idx].handle = "@\(cleaned)"
+        if let handoff = ReservedHandles.handoffEmail(forUsername: oldUsername) {
+            ReservedHandles.setHandoffEmail(forUsername: oldUsername, email: "")
+            ReservedHandles.setHandoffEmail(forUsername: cleaned, email: handoff)
+        }
 
         if let pw = localCredentials.removeValue(forKey: oldKey) {
             localCredentials[newKey] = pw
@@ -3435,6 +3506,9 @@ final class AppState: ObservableObject {
         }
         let key = cleaned.lowercased()
         if localCredentials[key] != nil {
+            return "Username already exists."
+        }
+        if internalUsers.contains(where: { $0.username.lowercased() == key }) {
             return "Username already exists."
         }
         localCredentials[key] = password

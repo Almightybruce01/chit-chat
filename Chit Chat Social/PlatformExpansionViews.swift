@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct AdminDashboardView: View {
     @EnvironmentObject private var appState: AppState
@@ -7,9 +8,13 @@ struct AdminDashboardView: View {
     @State private var query = ""
     @State private var reviewerNote = ""
     @State private var selectedSection: DashboardSection = .verificationQueue
-    @State private var renameDraftByUserID: [UUID: String] = [:]
-    @State private var userPendingDelete: UserProfile?
     @State private var adminFeedback: String?
+    @State private var newHoldUsername = ""
+    @State private var placeholderUsername = ""
+    @State private var placeholderDisplay = ""
+    @State private var placeholderPassword = ""
+    @State private var placeholderOfficial = true
+    @State private var assistantProblem = ""
 
     var body: some View {
         ZStack {
@@ -21,13 +26,13 @@ struct AdminDashboardView: View {
                             .foregroundStyle(secondaryText)
                     }
                 } else {
-                    Section("Dashboard Sections") {
-                        Picker("Sections", selection: $selectedSection) {
+                    Section("Dashboard area") {
+                        Picker("Area", selection: $selectedSection) {
                             ForEach(DashboardSection.allCases, id: \.self) { section in
                                 Text(section.rawValue).tag(section)
                             }
                         }
-                        .pickerStyle(.segmented)
+                        .pickerStyle(.menu)
                     }
 
                     if let adminFeedback {
@@ -50,6 +55,18 @@ struct AdminDashboardView: View {
                                 adminFeedback = "Auto-verify pass complete."
                             }
                             .buttonStyle(.borderedProminent)
+                        }
+                        Section("Bulk queue (careful)") {
+                            Text("Approves every pending request with an admin note. Use when you trust the whole batch.")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                            Button("Approve all pending requests now") {
+                                adminFeedback = nil
+                                appState.approveAllPendingVerificationRequests()
+                                adminFeedback = "All pending requests approved."
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.orange)
                         }
                     }
 
@@ -161,31 +178,113 @@ struct AdminDashboardView: View {
                                     .foregroundStyle(secondaryText)
                             } else {
                                 ForEach(matches) { user in
-                                    userAdminRow(user)
+                                    NavigationLink {
+                                        AdminUserDetailView(profile: user)
+                                            .environmentObject(appState)
+                                    } label: {
+                                        adminUserRowLabel(user)
+                                    }
                                 }
                             }
                         }
                     }
 
-                    if selectedSection == .ai {
-                        Section("AI Reviewer Assistant") {
-                            Text("AI helper prompts:")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(primaryText)
-                            Text("• High-trust signals: linked platforms, engagement consistency, impersonation checks")
+                    if selectedSection == .holds {
+                        Section("Username holds (you add manually)") {
+                            Text("Chit Chat Social does not scrape Instagram or league rosters. Add VIP handles yourself after you confirm the rightful owner. Holds block new signups for that username.")
+                                .font(.caption)
                                 .foregroundStyle(secondaryText)
-                            Text("• Fast review path: prioritize IG-verified + high follower integrity profiles")
+                            TextField("username to hold", text: $newHoldUsername)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            Button("Add hold") {
+                                if let err = ReservedHandles.addAdminHeldUsername(newHoldUsername) {
+                                    adminFeedback = err
+                                } else {
+                                    adminFeedback = "Hold added."
+                                    newHoldUsername = ""
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        Section("Active holds (\(ReservedHandles.adminHeldUsernamesSorted().count))") {
+                            if ReservedHandles.adminHeldUsernamesSorted().isEmpty {
+                                Text("No extra holds. System brand list still applies.")
+                                    .foregroundStyle(secondaryText)
+                            } else {
+                                ForEach(ReservedHandles.adminHeldUsernamesSorted(), id: \.self) { name in
+                                    HStack {
+                                        Text("@\(name)")
+                                            .foregroundStyle(primaryText)
+                                        Spacer()
+                                        Button("Release") {
+                                            ReservedHandles.removeAdminHeldUsername(name)
+                                            adminFeedback = "Released @\(name)."
+                                        }
+                                        .buttonStyle(.bordered)
+                                        .tint(.cyan)
+                                    }
+                                }
+                            }
+                        }
+                        Section("Placeholder account (login + profile)") {
+                            Text("Creates a local account with password. Share credentials securely. Optional official badge. Handoff email: open the user after creation.")
+                                .font(.caption)
                                 .foregroundStyle(secondaryText)
-                            Text("• Fraud checks: recent username changes, suspicious growth spikes, duplicate bios")
-                                .foregroundStyle(secondaryText)
+                            TextField("Username", text: $placeholderUsername)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                            TextField("Display name", text: $placeholderDisplay)
+                            SecureField("Password (8+ chars)", text: $placeholderPassword)
+                            Toggle("Grant official verified badge", isOn: $placeholderOfficial)
+                            Button("Create placeholder") {
+                                if let err = appState.adminCreatePlaceholderLocalAccount(
+                                    username: placeholderUsername,
+                                    displayName: placeholderDisplay,
+                                    password: placeholderPassword,
+                                    grantOfficialVerifiedBadge: placeholderOfficial
+                                ) {
+                                    adminFeedback = err
+                                } else {
+                                    adminFeedback = "Placeholder created."
+                                    placeholderUsername = ""
+                                    placeholderDisplay = ""
+                                    placeholderPassword = ""
+                                }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.green)
                         }
                     }
 
-                    if selectedSection == .settings {
-                        Section("Review Settings") {
-                            Text("Use Verification Queue for decisions, Users for manual override, AI section for guided checks.")
-                                .foregroundStyle(secondaryText)
-                            Text("This dashboard is optimized for approve/decline workflows in under 2 taps.")
+                    if selectedSection == .guide {
+                        Section("Every admin feature") {
+                            adminFeatureBullet("Queue — Approve/decline verification requests; auto-verify IG signal; bulk-approve all pending.")
+                            adminFeatureBullet("Jobs — Approve pending business job posts.")
+                            adminFeatureBullet("Users — Search directory; tap a person for official verify, paid badge, rename, handoff email, delete.")
+                            adminFeatureBullet("Holds — Block usernames without a profile; release when ready; create placeholder accounts with password.")
+                            adminFeatureBullet("Help — Describe a problem; copy a prompt for ChatGPT / Cursor with exact dashboard context.")
+                        }
+                        Section("Badges") {
+                            adminFeatureBullet("Official verified — internal trust badge (use for real approvals).")
+                            adminFeatureBullet("Paid — separate monetized badge; not the same as official.")
+                        }
+                    }
+
+                    if selectedSection == .assistant {
+                        Section("Describe your problem") {
+                            TextEditor(text: $assistantProblem)
+                                .frame(minHeight: 120)
+                                .foregroundStyle(primaryText)
+                            Button("Copy steps prompt for AI") {
+                                UIPasteboard.general.string = adminAssistantPromptBody
+                                adminFeedback = "Prompt copied. Paste into ChatGPT or Cursor."
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        Section("Included in the prompt") {
+                            Text(adminAssistantPromptBody)
+                                .font(.caption2)
                                 .foregroundStyle(secondaryText)
                         }
                     }
@@ -203,89 +302,49 @@ struct AdminDashboardView: View {
                     appState.autoApproveIGSignalVerificationRequests()
                 }
             }
-            .confirmationDialog(
-                "Remove this user from the local directory?",
-                isPresented: Binding(
-                    get: { userPendingDelete != nil },
-                    set: { if !$0 { userPendingDelete = nil } }
-                ),
-                presenting: userPendingDelete
-            ) { user in
-                Button("Delete \(user.handle)", role: .destructive) {
-                    appState.adminDeleteInternalUser(id: user.id)
-                    adminFeedback = "Removed \(user.handle) from the directory."
-                    userPendingDelete = nil
-                }
-                Button("Cancel", role: .cancel) {
-                    userPendingDelete = nil
-                }
-            } message: { user in
-                Text("This removes \(user.displayName) from admin search, saved credentials for that account, and pending verification rows tied to them. It does not delete remote cloud data.")
-            }
         }
         .navigationTitle("Chit Chat Social Admin")
     }
 
-    @ViewBuilder
-    private func userAdminRow(_ user: UserProfile) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("\(user.displayName) (\(user.handle))")
-                .font(.headline)
-                .foregroundStyle(primaryText)
-            Text("Username: \(user.username) • Status: \(statusLabel(user.verificationStatus))")
-                .font(.subheadline)
-                .foregroundStyle(secondaryText)
-            TextField("New username", text: renameBinding(for: user))
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .padding(8)
-                .background(Color.white.opacity(colorScheme == .light ? 0.55 : 0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+    private var adminAssistantPromptBody: String {
+        let problem = assistantProblem.trimmingCharacters(in: .whitespacesAndNewlines)
+        let p = problem.isEmpty ? "(describe your issue above first)" : problem
+        return """
+        I am the admin of the Chit Chat Social iOS app (local MVP + Firebase stubs).
 
-            HStack(spacing: 10) {
-                Button("Save username") {
-                    let raw = renameDraftByUserID[user.id] ?? user.username
-                    if let err = appState.adminRenameUser(userID: user.id, rawUsername: raw) {
-                        adminFeedback = err
-                    } else {
-                        adminFeedback = "Username saved."
-                        renameDraftByUserID[user.id] = nil
-                    }
-                }
-                .buttonStyle(.borderedProminent)
+        My problem: \(p)
 
-                Button("Delete user") {
-                    userPendingDelete = user
-                }
-                .buttonStyle(.bordered)
-                .tint(.red)
-                .disabled(user.id == appState.currentUser.id)
-            }
+        The in-app admin dashboard has these areas (menu at top):
+        - Queue: verification approve/decline, IG auto-verify, bulk approve all pending.
+        - Jobs: approve business job posts.
+        - Users: search users; tap opens detail for official verified badge, paid badge, clear badges, rename, optional handoff email note, delete.
+        - Holds: manually add/release username holds (no scraping); create placeholder accounts with password + optional official badge.
+        - Help: this list.
 
-            HStack(spacing: 10) {
-                Button("Grant Real Verify") {
-                    appState.grantInternalVerification(userID: user.id)
-                }
-                .buttonStyle(.bordered)
-                Button("Set Paid") {
-                    if appState.currentUser.id == user.id {
-                        appState.requestPaidVerification()
-                    }
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-        .padding(.vertical, 6)
+        Official verified is the internal trust badge; paid is separate.
+
+        Give numbered, exact steps I should tap in the app, and mention if something needs Xcode, Firebase Console, or GitHub instead. Be concise.
+        """
     }
 
-    private func renameBinding(for user: UserProfile) -> Binding<String> {
-        Binding(
-            get: {
-                if let draft = renameDraftByUserID[user.id] { return draft }
-                return user.username
-            },
-            set: { renameDraftByUserID[user.id] = $0 }
-        )
+    @ViewBuilder
+    private func adminUserRowLabel(_ user: UserProfile) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(user.displayName)
+                .font(.headline)
+                .foregroundStyle(primaryText)
+            Text("\(user.handle) · \(statusLabel(user.verificationStatus))")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+        }
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func adminFeatureBullet(_ text: String) -> some View {
+        Text("• \(text)")
+            .font(.subheadline)
+            .foregroundStyle(secondaryText)
     }
 
     private var primaryText: Color {
@@ -301,7 +360,7 @@ struct AdminDashboardView: View {
         case .unverified: return "Unverified"
         case .pending: return "Pending"
         case .paid: return "Paid badge"
-        case .verifiedInternal: return "Official internal verified"
+        case .verifiedInternal: return "Official verified"
         }
     }
 
@@ -309,8 +368,9 @@ struct AdminDashboardView: View {
         case verificationQueue = "Queue"
         case jobApprovals = "Jobs"
         case users = "Users"
-        case ai = "AI"
-        case settings = "Settings"
+        case holds = "Holds"
+        case guide = "Guide"
+        case assistant = "Help"
     }
 }
 
