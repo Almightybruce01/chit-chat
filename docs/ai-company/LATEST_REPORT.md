@@ -1,39 +1,39 @@
 # Daily Company Report (Phases 1–3)
 
-_Generated: 2026-03-23T17:45:08.597960+00:00_
+_Generated: 2026-03-24T13:20:48.956933+00:00_
 
 _Automation: P1=True, P2=True, P3 history+memory=True, LLM=True_
 
 ## 1. Executive Summary
 
-- Scanned 82 files, 20,111 total lines.
-- Git (7d commits): n/a
-- Today's single focus: Close highest-priority TODO
-- Trend keywords: your, iphone, demonstrated, running, cyber, serving
+- Scanned 84 files, 20,523 total lines.
+- Git (7d commits): 4
+- Today's single focus: Add security pass: Keychain review for session tokens
+- Trend keywords: opera, grep, server, litellm, python, package
 
 ## 2. Trends (ingested)
 
 ### hacker_news
 
-- [iPhone 17 Pro Demonstrated Running a 400B LLM](https://twitter.com/anemll/status/2035901335984611412)
-- [Cyber.mil serving file downloads using TLS certificate which expired 3 days ago](https://www.cyber.mil/stigs/downloads)
-- [Trivy under attack again: Widespread GitHub Actions tag compromise secrets](https://socket.dev/blog/trivy-under-attack-again-github-actions-compromise)
-- [Show HN: Threadprocs – executables sharing one address space (0-copy pointers)](https://github.com/jer-irl/threadprocs)
-- [Bombadil: Property-based testing for web UIs](https://github.com/antithesishq/bombadil)
+- [LiteLLM Python package compromised by supply-chain attack](https://github.com/BerriAI/litellm/issues/24512)
+- [Microsoft's "Fix" for Windows 11: Flowers After the Beating](https://www.sambent.com/microsofts-plan-to-fix-windows-11-is-gaslighting/)
+- [Missile Defense Is NP-Complete](https://smu160.github.io/posts/missile-defense-is-np-complete/)
+- [Opera: Rewind The Web to 1996 (Opera at 30)](https://www.web-rewind.com)
+- [Debunking Zswap and Zram Myths](https://chrisdown.name/2026/03/24/zswap-vs-zram-when-to-use-what.html)
 ### dev_to
 
-- [I tuned Hindsight for long conversations](https://dev.to/anjankumar_ln_41a980a9fd/i-tuned-hindsight-for-long-conversations-46k4)
-- [The Particle That Walks Through Walls — And Why Your Phone Depends On It](https://dev.to/bytefluxlab/the-particle-that-walks-through-walls-and-why-your-phone-depends-on-it-53ij)
-- [Programing Concurrency](https://dev.to/tavari/programing-concurrency-d9l)
-- [MCP configs are a silent security risk. I built mcp-scan to fix that.](https://dev.to/rodolfboctor/mcp-configs-are-a-silent-security-risk-i-built-mcp-scan-to-fix-that-5akk)
-- [Your AI Agent Has a Dirty Secret: It Can’t Log In](https://dev.to/dannygerst/your-ai-agent-has-a-dirty-secret-it-cant-log-in-2bln)
+- [Stop running JSON-Server locally](https://dev.to/jdevbr/stop-running-json-server-locally-5g3m)
+- [Instruction Best Practices: Precision Beats Clarity](https://dev.to/cleverhoods/instruction-best-practices-precision-beats-clarity-lod)
+- ["The human might be asleep." One line in Karpathy's program.md started 100 automatic experiments per night.](https://dev.to/n_asuy/the-human-might-be-asleep-one-line-in-karpathys-programmd-started-100-automatic-experiments-e1)
+- [Building a Concurrent TCP Chat Server in Go (NetCat Clone)](https://dev.to/odinga71/building-a-concurrent-tcp-chat-server-in-go-netcat-clone-jc1)
+- [Why You Should Start Using Negative If Statements in Your Code](https://dev.to/tupe12334/why-you-should-start-using-negative-if-statements-in-your-code-4l39)
 
-**Keywords:** your, iphone, demonstrated, running, cyber, serving, file, downloads, using, certificate
+**Keywords:** opera, grep, server, litellm, python, package, compromised, supply, chain, attack
 
 ## 3. Memory (Phase 3 self-improving)
 
-- History healthy — rotate script types for breadth.
-- **Script types seen:** swift_refactor
+- LOC grew from 19,682 → 20,111 — consider pruning dead code weekly.
+- **Script types seen:** todo, swift_refactor
 
 ## 4. Collaboration resolution
 
@@ -43,14 +43,14 @@ _Automation: P1=True, P2=True, P3 history+memory=True, LLM=True_
   - growth
   - experimentation
 - **active_trend_keywords**:
-  - your
-  - iphone
-  - demonstrated
-  - running
-  - cyber
-  - serving
-  - file
-  - downloads
+  - opera
+  - grep
+  - server
+  - litellm
+  - python
+  - package
+  - compromised
+  - supply
 - **conflict_notes**:
   - Engineering priority: large Swift files; defer trend-chasing until refactor landed.
 
@@ -59,7 +59,7 @@ _Automation: P1=True, P2=True, P3 history+memory=True, LLM=True_
 ### Product
 
 - iOS surface area: ~17,238 Swift LOC — prioritize modular splits if any file >3k lines.
-- Backlog signal: 114 TODO/FIXME markers in scanned files.
+- Backlog signal: 165 TODO/FIXME markers in scanned files.
 - Competitor pattern: ship one high-retention loop daily (feed perf, cold start, or notifications).
 
 ### Engineering
@@ -70,7 +70,7 @@ _Automation: P1=True, P2=True, P3 history+memory=True, LLM=True_
 
 ### Data & AI
 
-- Telemetry placeholder: correlate commits (n/a in 7d) with crash-free sessions when you add logging.
+- Telemetry placeholder: correlate commits (4 in 7d) with crash-free sessions when you add logging.
 - Suggest: structured events for tab switches, post create funnel, reel exit.
 
 ### DevOps
@@ -105,18 +105,19 @@ _Automation: P1=True, P2=True, P3 history+memory=True, LLM=True_
 
 ## 8. TODAY'S ONE SCRIPT
 
-**Close highest-priority TODO**
+**Add security pass: Keychain review for session tokens**
 
-- Rationale: Address technical debt at AI_COMPANY_SETUP.md:10.
-- Type: todo
+- Rationale: Default rotation when no mega-file pressure.
+- Type: security
 - Files:
-  - `AI_COMPANY_SETUP.md`
+  - `Chit Chat/AppState.swift`
+  - `Chit Chat/LoginView.swift`
 - Steps:
-  1. Open file at line
-  1. Resolve or convert to GitHub issue with acceptance criteria.
+  1. Audit UserDefaults vs Keychain for sensitive values.
+  1. Document threat model in ops/README.md.
 
 ```
-// Resolved: | **2** | Pulls **live trends** (Hacker News + DEV RSS), merges “department” ins
+// MARK: - Security audit notes
 ```
 
 ## 9. Expected Impact
@@ -125,6 +126,10 @@ _Automation: P1=True, P2=True, P3 history+memory=True, LLM=True_
 - **ux**: Smaller views = fewer SwiftUI regressions.
 - **revenue**: Faster iteration on monetization experiments.
 - **scalability**: Modular state scales with contributors.
+
+## GitHub
+- Repo: `Almightybruce01/chit-chat`
+
 
 ---
 *Chit Chat AI Company — automated pipeline*

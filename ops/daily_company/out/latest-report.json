@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-03-23T17:45:08.597960+00:00",
-  "repo_root": "/Users/brianbruce/Desktop/Chit Chat",
+  "generated_at": "2026-03-24T13:20:48.956933+00:00",
+  "repo_root": "/home/runner/work/chit-chat/chit-chat",
   "phases": {
     "p1_scan": true,
     "p2_trends_collab": true,
@@ -8,16 +8,139 @@
     "p3_llm_enrichment": true
   },
   "executive_summary": [
-    "Scanned 82 files, 20,111 total lines.",
-    "Git (7d commits): n/a",
-    "Today's single focus: Close highest-priority TODO",
-    "Trend keywords: your, iphone, demonstrated, running, cyber, serving"
+    "Scanned 84 files, 20,523 total lines.",
+    "Git (7d commits): 4",
+    "Today's single focus: Add security pass: Keychain review for session tokens",
+    "Trend keywords: opera, grep, server, litellm, python, package"
   ],
   "llm_note": null,
   "github": {
-    "remote": null,
-    "owner_repo": null,
-    "api": {}
+    "remote": "https://github.com/Almightybruce01/chit-chat",
+    "owner_repo": "Almightybruce01/chit-chat",
+    "api": {
+      "id": 1189852198,
+      "node_id": "R_kgDORuu0Jg",
+      "name": "chit-chat",
+      "full_name": "Almightybruce01/chit-chat",
+      "private": false,
+      "owner": {
+        "login": "Almightybruce01",
+        "id": 182538929,
+        "node_id": "U_kgDOCuFSsQ",
+        "avatar_url": "https://avatars.githubusercontent.com/u/182538929?v=4",
+        "gravatar_id": "",
+        "url": "https://api.github.com/users/Almightybruce01",
+        "html_url": "https://github.com/Almightybruce01",
+        "followers_url": "https://api.github.com/users/Almightybruce01/followers",
+        "following_url": "https://api.github.com/users/Almightybruce01/following{/other_user}",
+        "gists_url": "https://api.github.com/users/Almightybruce01/gists{/gist_id}",
+        "starred_url": "https://api.github.com/users/Almightybruce01/starred{/owner}{/repo}",
+        "subscriptions_url": "https://api.github.com/users/Almightybruce01/subscriptions",
+        "organizations_url": "https://api.github.com/users/Almightybruce01/orgs",
+        "repos_url": "https://api.github.com/users/Almightybruce01/repos",
+        "events_url": "https://api.github.com/users/Almightybruce01/events{/privacy}",
+        "received_events_url": "https://api.github.com/users/Almightybruce01/received_events",
+        "type": "User",
+        "user_view_type": "public",
+        "site_admin": false
+      },
+      "html_url": "https://github.com/Almightybruce01/chit-chat",
+      "description": "Chit Chat iOS app + AI Company daily dashboard (ops/)",
+      "fork": false,
+      "url": "https://api.github.com/repos/Almightybruce01/chit-chat",
+      "forks_url": "https://api.github.com/repos/Almightybruce01/chit-chat/forks",
+      "keys_url": "https://api.github.com/repos/Almightybruce01/chit-chat/keys{/key_id}",
+      "collaborators_url": "https://api.github.com/repos/Almightybruce01/chit-chat/collaborators{/collaborator}",
+      "teams_url": "https://api.github.com/repos/Almightybruce01/chit-chat/teams",
+      "hooks_url": "https://api.github.com/repos/Almightybruce01/chit-chat/hooks",
+      "issue_events_url": "https://api.github.com/repos/Almightybruce01/chit-chat/issues/events{/number}",
+      "events_url": "https://api.github.com/repos/Almightybruce01/chit-chat/events",
+      "assignees_url": "https://api.github.com/repos/Almightybruce01/chit-chat/assignees{/user}",
+      "branches_url": "https://api.github.com/repos/Almightybruce01/chit-chat/branches{/branch}",
+      "tags_url": "https://api.github.com/repos/Almightybruce01/chit-chat/tags",
+      "blobs_url": "https://api.github.com/repos/Almightybruce01/chit-chat/git/blobs{/sha}",
+      "git_tags_url": "https://api.github.com/repos/Almightybruce01/chit-chat/git/tags{/sha}",
+      "git_refs_url": "https://api.github.com/repos/Almightybruce01/chit-chat/git/refs{/sha}",
+      "trees_url": "https://api.github.com/repos/Almightybruce01/chit-chat/git/trees{/sha}",
+      "statuses_url": "https://api.github.com/repos/Almightybruce01/chit-chat/statuses/{sha}",
+      "languages_url": "https://api.github.com/repos/Almightybruce01/chit-chat/languages",
+      "stargazers_url": "https://api.github.com/repos/Almightybruce01/chit-chat/stargazers",
+      "contributors_url": "https://api.github.com/repos/Almightybruce01/chit-chat/contributors",
+      "subscribers_url": "https://api.github.com/repos/Almightybruce01/chit-chat/subscribers",
+      "subscription_url": "https://api.github.com/repos/Almightybruce01/chit-chat/subscription",
+      "commits_url": "https://api.github.com/repos/Almightybruce01/chit-chat/commits{/sha}",
+      "git_commits_url": "https://api.github.com/repos/Almightybruce01/chit-chat/git/commits{/sha}",
+      "comments_url": "https://api.github.com/repos/Almightybruce01/chit-chat/comments{/number}",
+      "issue_comment_url": "https://api.github.com/repos/Almightybruce01/chit-chat/issues/comments{/number}",
+      "contents_url": "https://api.github.com/repos/Almightybruce01/chit-chat/contents/{+path}",
+      "compare_url": "https://api.github.com/repos/Almightybruce01/chit-chat/compare/{base}...{head}",
+      "merges_url": "https://api.github.com/repos/Almightybruce01/chit-chat/merges",
+      "archive_url": "https://api.github.com/repos/Almightybruce01/chit-chat/{archive_format}{/ref}",
+      "downloads_url": "https://api.github.com/repos/Almightybruce01/chit-chat/downloads",
+      "issues_url": "https://api.github.com/repos/Almightybruce01/chit-chat/issues{/number}",
+      "pulls_url": "https://api.github.com/repos/Almightybruce01/chit-chat/pulls{/number}",
+      "milestones_url": "https://api.github.com/repos/Almightybruce01/chit-chat/milestones{/number}",
+      "notifications_url": "https://api.github.com/repos/Almightybruce01/chit-chat/notifications{?since,all,participating}",
+      "labels_url": "https://api.github.com/repos/Almightybruce01/chit-chat/labels{/name}",
+      "releases_url": "https://api.github.com/repos/Almightybruce01/chit-chat/releases{/id}",
+      "deployments_url": "https://api.github.com/repos/Almightybruce01/chit-chat/deployments",
+      "created_at": "2026-03-23T18:22:26Z",
+      "updated_at": "2026-03-23T18:32:21Z",
+      "pushed_at": "2026-03-23T18:32:17Z",
+      "git_url": "git://github.com/Almightybruce01/chit-chat.git",
+      "ssh_url": "git@github.com:Almightybruce01/chit-chat.git",
+      "clone_url": "https://github.com/Almightybruce01/chit-chat.git",
+      "svn_url": "https://github.com/Almightybruce01/chit-chat",
+      "homepage": null,
+      "size": 1953,
+      "stargazers_count": 0,
+      "watchers_count": 0,
+      "language": "Swift",
+      "has_issues": true,
+      "has_projects": true,
+      "has_downloads": true,
+      "has_wiki": false,
+      "has_pages": true,
+      "has_discussions": false,
+      "forks_count": 0,
+      "mirror_url": null,
+      "archived": false,
+      "disabled": false,
+      "open_issues_count": 0,
+      "license": null,
+      "allow_forking": true,
+      "is_template": false,
+      "web_commit_signoff_required": false,
+      "has_pull_requests": true,
+      "pull_request_creation_policy": "all",
+      "topics": [],
+      "visibility": "public",
+      "forks": 0,
+      "open_issues": 0,
+      "watchers": 0,
+      "default_branch": "main",
+      "permissions": {
+        "admin": false,
+        "maintain": false,
+        "push": false,
+        "triage": false,
+        "pull": false
+      },
+      "temp_clone_token": "",
+      "allow_squash_merge": true,
+      "allow_merge_commit": true,
+      "allow_rebase_merge": true,
+      "allow_auto_merge": false,
+      "delete_branch_on_merge": false,
+      "allow_update_branch": false,
+      "use_squash_pr_title_as_default": false,
+      "squash_merge_commit_message": "COMMIT_MESSAGES",
+      "squash_merge_commit_title": "COMMIT_OR_PR_TITLE",
+      "merge_commit_message": "PR_TITLE",
+      "merge_commit_title": "MERGE_MESSAGE",
+      "network_count": 0,
+      "subscribers_count": 0
+    }
   },
   "collaboration": {
     "priority_stack": [
@@ -27,25 +150,26 @@
       "experimentation"
     ],
     "active_trend_keywords": [
-      "your",
-      "iphone",
-      "demonstrated",
-      "running",
-      "cyber",
-      "serving",
-      "file",
-      "downloads"
+      "opera",
+      "grep",
+      "server",
+      "litellm",
+      "python",
+      "package",
+      "compromised",
+      "supply"
     ],
     "conflict_notes": [
       "Engineering priority: large Swift files; defer trend-chasing until refactor landed."
     ]
   },
   "memory": {
-    "run_count": 1,
+    "run_count": 2,
     "insights": [
-      "History healthy \u2014 rotate script types for breadth."
+      "LOC grew from 19,682 \u2192 20,111 \u2014 consider pruning dead code weekly."
     ],
     "top_script_types": [
+      "todo",
       "swift_refactor"
     ],
     "repeat_titles": []
@@ -54,7 +178,7 @@
     "Product": {
       "bullets": [
         "iOS surface area: ~17,238 Swift LOC \u2014 prioritize modular splits if any file >3k lines.",
-        "Backlog signal: 114 TODO/FIXME markers in scanned files.",
+        "Backlog signal: 165 TODO/FIXME markers in scanned files.",
         "Competitor pattern: ship one high-retention loop daily (feed perf, cold start, or notifications)."
       ]
     },
@@ -67,7 +191,7 @@
     },
     "Data & AI": {
       "bullets": [
-        "Telemetry placeholder: correlate commits (n/a in 7d) with crash-free sessions when you add logging.",
+        "Telemetry placeholder: correlate commits (4 in 7d) with crash-free sessions when you add logging.",
         "Suggest: structured events for tab switches, post create funnel, reel exit."
       ]
     },
@@ -97,116 +221,116 @@
     }
   },
   "trends": {
-    "fetched_at": "2026-03-23T17:45:08.376357+00:00",
+    "fetched_at": "2026-03-24T13:20:48.741053+00:00",
     "sources": {
       "hacker_news": {
-        "fetched_at": "2026-03-23T17:45:08.139794+00:00",
+        "fetched_at": "2026-03-24T13:20:48.612911+00:00",
         "items": [
           {
-            "title": "iPhone 17 Pro Demonstrated Running a 400B LLM",
-            "url": "https://twitter.com/anemll/status/2035901335984611412",
-            "score": 206,
+            "title": "LiteLLM Python package compromised by supply-chain attack",
+            "url": "https://github.com/BerriAI/litellm/issues/24512",
+            "score": 46,
             "source": "Hacker News"
           },
           {
-            "title": "Cyber.mil serving file downloads using TLS certificate which expired 3 days ago",
-            "url": "https://www.cyber.mil/stigs/downloads",
-            "score": 86,
+            "title": "Microsoft's \"Fix\" for Windows 11: Flowers After the Beating",
+            "url": "https://www.sambent.com/microsofts-plan-to-fix-windows-11-is-gaslighting/",
+            "score": 415,
             "source": "Hacker News"
           },
           {
-            "title": "Trivy under attack again: Widespread GitHub Actions tag compromise secrets",
-            "url": "https://socket.dev/blog/trivy-under-attack-again-github-actions-compromise",
-            "score": 23,
+            "title": "Missile Defense Is NP-Complete",
+            "url": "https://smu160.github.io/posts/missile-defense-is-np-complete/",
+            "score": 17,
             "source": "Hacker News"
           },
           {
-            "title": "Show HN: Threadprocs \u2013 executables sharing one address space (0-copy pointers)",
-            "url": "https://github.com/jer-irl/threadprocs",
-            "score": 31,
+            "title": "Opera: Rewind The Web to 1996 (Opera at 30)",
+            "url": "https://www.web-rewind.com",
+            "score": 117,
             "source": "Hacker News"
           },
           {
-            "title": "Bombadil: Property-based testing for web UIs",
-            "url": "https://github.com/antithesishq/bombadil",
-            "score": 170,
+            "title": "Debunking Zswap and Zram Myths",
+            "url": "https://chrisdown.name/2026/03/24/zswap-vs-zram-when-to-use-what.html",
+            "score": 46,
             "source": "Hacker News"
           },
           {
-            "title": "BIO: The Bao I/O Coprocessor",
-            "url": "https://www.bunniestudios.com/blog/2026/bio-the-bao-i-o-coprocessor/",
-            "score": 13,
+            "title": "Ripgrep is faster than grep, ag, git grep, ucg, pt, sift (2016)",
+            "url": "https://burntsushi.net/ripgrep/",
+            "score": 140,
             "source": "Hacker News"
           },
           {
-            "title": "Is it a pint?",
-            "url": "https://isitapint.com/",
-            "score": 87,
+            "title": "curl > /dev/sda: How I made a Linux distro that runs wget | dd",
+            "url": "https://astrid.tech/2026/03/24/0/curl-to-dev-sda/",
+            "score": 37,
             "source": "Hacker News"
           },
           {
-            "title": "An unsolicited guide to being a researcher [pdf]",
-            "url": "https://emerge-lab.github.io/papers/an-unsolicited-guide-to-good-research.pdf",
-            "score": 100,
+            "title": "Box of Secrets: Discreetly modding an apartment intercom to work with Apple Home",
+            "url": "https://www.jackhogan.me/blog/box-of-secrets/",
+            "score": 198,
             "source": "Hacker News"
           }
         ]
       },
       "dev_to": {
-        "fetched_at": "2026-03-23T17:45:08.375805+00:00",
+        "fetched_at": "2026-03-24T13:20:48.740914+00:00",
         "items": [
           {
-            "title": "I tuned Hindsight for long conversations",
-            "url": "https://dev.to/anjankumar_ln_41a980a9fd/i-tuned-hindsight-for-long-conversations-46k4",
+            "title": "Stop running JSON-Server locally",
+            "url": "https://dev.to/jdevbr/stop-running-json-server-locally-5g3m",
             "source": "DEV Community"
           },
           {
-            "title": "The Particle That Walks Through Walls \u2014 And Why Your Phone Depends On It",
-            "url": "https://dev.to/bytefluxlab/the-particle-that-walks-through-walls-and-why-your-phone-depends-on-it-53ij",
+            "title": "Instruction Best Practices: Precision Beats Clarity",
+            "url": "https://dev.to/cleverhoods/instruction-best-practices-precision-beats-clarity-lod",
             "source": "DEV Community"
           },
           {
-            "title": "Programing Concurrency",
-            "url": "https://dev.to/tavari/programing-concurrency-d9l",
+            "title": "\"The human might be asleep.\" One line in Karpathy's program.md started 100 automatic experiments per night.",
+            "url": "https://dev.to/n_asuy/the-human-might-be-asleep-one-line-in-karpathys-programmd-started-100-automatic-experiments-e1",
             "source": "DEV Community"
           },
           {
-            "title": "MCP configs are a silent security risk. I built mcp-scan to fix that.",
-            "url": "https://dev.to/rodolfboctor/mcp-configs-are-a-silent-security-risk-i-built-mcp-scan-to-fix-that-5akk",
+            "title": "Building a Concurrent TCP Chat Server in Go (NetCat Clone)",
+            "url": "https://dev.to/odinga71/building-a-concurrent-tcp-chat-server-in-go-netcat-clone-jc1",
             "source": "DEV Community"
           },
           {
-            "title": "Your AI Agent Has a Dirty Secret: It Can\u2019t Log In",
-            "url": "https://dev.to/dannygerst/your-ai-agent-has-a-dirty-secret-it-cant-log-in-2bln",
+            "title": "Why You Should Start Using Negative If Statements in Your Code",
+            "url": "https://dev.to/tupe12334/why-you-should-start-using-negative-if-statements-in-your-code-4l39",
             "source": "DEV Community"
           }
         ]
       }
     },
     "keywords": [
-      "your",
-      "iphone",
-      "demonstrated",
-      "running",
-      "cyber",
-      "serving",
-      "file",
-      "downloads",
-      "using",
-      "certificate",
-      "which",
-      "expired"
+      "opera",
+      "grep",
+      "server",
+      "litellm",
+      "python",
+      "package",
+      "compromised",
+      "supply",
+      "chain",
+      "attack",
+      "microsoft",
+      "windows"
     ]
   },
   "scan": {
-    "root": "/Users/brianbruce/Desktop/Chit Chat",
-    "total_files": 82,
-    "total_lines": 20111,
+    "root": "/home/runner/work/chit-chat/chit-chat",
+    "total_files": 84,
+    "total_lines": 20523,
     "by_language": {
       "Swift": 17238,
+      "JSON": 1277,
       "Python": 1113,
-      "JSON": 967,
-      "Markdown": 720,
+      "Markdown": 822,
       "YAML": 73
     },
     "largest_files": [
@@ -241,14 +365,24 @@
         "language": "Swift"
       },
       {
+        "path": "Chit Chat/Models.swift",
+        "lines": 525,
+        "language": "Swift"
+      },
+      {
         "path": "Chit Chat/SocialMarketplaceView.swift",
         "lines": 525,
         "language": "Swift"
       },
       {
-        "path": "Chit Chat/Models.swift",
-        "lines": 525,
-        "language": "Swift"
+        "path": "ops/daily_company/out/latest-report.json",
+        "lines": 521,
+        "language": "JSON"
+      },
+      {
+        "path": "docs/ai-company/latest-report.json",
+        "lines": 521,
+        "language": "JSON"
       },
       {
         "path": "Chit Chat/BrandKit.swift",
@@ -264,16 +398,6 @@
         "path": "Chit Chat/LoginView.swift",
         "lines": 439,
         "language": "Swift"
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "lines": 410,
-        "language": "JSON"
-      },
-      {
-        "path": "ops/daily_company/out/latest-report.json",
-        "lines": 410,
-        "language": "JSON"
       },
       {
         "path": "Chit Chat/AppExperienceKit.swift",
@@ -293,203 +417,203 @@
         "snippet": "| **2** | Pulls **live trends** (Hacker News + DEV RSS), merges \u201cdepartment\u201d insights, optional **GitHub API** meta |"
       },
       {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 43,
-        "snippet": "\"Backlog signal: 66 TODO/FIXME markers in scanned files.\","
+        "path": "ops/daily_company/departments.py",
+        "line": 31,
+        "snippet": "if scan.todo_hits:"
       },
       {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 177,
+        "path": "ops/daily_company/departments.py",
+        "line": 32,
+        "snippet": "bullets.append(f\"Backlog signal: {len(scan.todo_hits)} TODO/FIXME markers in scanned files.\")"
+      },
+      {
+        "path": "ops/daily_company/departments.py",
+        "line": 34,
+        "snippet": "bullets.append(\"No TODO/FIXME hits in scanned extensions \u2014 good hygiene or narrow scan.\")"
+      },
+      {
+        "path": "ops/daily_company/report_generator.py",
+        "line": 105,
+        "snippet": "\"TODO markers indicate unfinished work.\" if scan.todo_hits else \"No TODO/FIXME in scanned files.\","
+      },
+      {
+        "path": "ops/daily_company/trends.py",
+        "line": 2,
+        "snippet": "Phase 2: Trend ingestion (no API keys) \u2014 Hacker News, RSS-style dev headlines."
+      },
+      {
+        "path": "ops/daily_company/trends.py",
+        "line": 29,
+        "snippet": "def fetch_hacker_news_top(n: int = 8) -> dict[str, Any]:"
+      },
+      {
+        "path": "ops/daily_company/trends.py",
+        "line": 32,
+        "snippet": "raw = _fetch(\"https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty\")"
+      },
+      {
+        "path": "ops/daily_company/trends.py",
+        "line": 41,
+        "snippet": "sraw = _fetch(f\"https://hacker-news.firebaseio.com/v0/item/{story_id}.json\")"
+      },
+      {
+        "path": "ops/daily_company/trends.py",
+        "line": 50,
+        "snippet": "{\"title\": title, \"url\": url, \"score\": s.get(\"score\"), \"source\": \"Hacker News\"}"
+      },
+      {
+        "path": "ops/daily_company/trends.py",
+        "line": 97,
+        "snippet": "Returns {sources: {hacker_news, dev_to}, keywords: [...]}"
+      },
+      {
+        "path": "ops/daily_company/trends.py",
+        "line": 106,
+        "snippet": "hn = fetch_hacker_news_top(8)"
+      },
+      {
+        "path": "ops/daily_company/trends.py",
+        "line": 129,
+        "snippet": "\"hacker_news\": hn,"
+      },
+      {
+        "path": "ops/daily_company/cto.py",
+        "line": 64,
+        "snippet": "if scan.todo_hits:"
+      },
+      {
+        "path": "ops/daily_company/cto.py",
+        "line": 65,
+        "snippet": "first = scan.todo_hits[0]"
+      },
+      {
+        "path": "ops/daily_company/cto.py",
+        "line": 68,
+        "snippet": "\"title\": \"Close highest-priority TODO\","
+      },
+      {
+        "path": "ops/daily_company/cto.py",
+        "line": 71,
+        "snippet": "\"script_type\": \"todo\","
+      },
+      {
+        "path": "ops/daily_company/scanner.py",
+        "line": 2,
+        "snippet": "Codebase scanner: file counts, lines, hotspots, TODOs, git activity."
+      },
+      {
+        "path": "ops/daily_company/scanner.py",
+        "line": 48,
+        "snippet": "todo_hits: list[tuple[str, int, str]] = field(default_factory=list)"
+      },
+      {
+        "path": "ops/daily_company/scanner.py",
+        "line": 63,
         "snippet": "\"todo_hits\": ["
       },
       {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 181,
+        "path": "ops/daily_company/scanner.py",
+        "line": 65,
+        "snippet": "for p, n, s in self.todo_hits[:40]"
+      },
+      {
+        "path": "ops/daily_company/scanner.py",
+        "line": 105,
+        "snippet": "TODO_RE = re.compile(r\"(TODO|FIXME|HACK|XXX)(\\s*:|)\", re.I)"
+      },
+      {
+        "path": "ops/daily_company/scanner.py",
+        "line": 125,
+        "snippet": "if TODO_RE.search(line):"
+      },
+      {
+        "path": "ops/daily_company/scanner.py",
+        "line": 126,
+        "snippet": "result.todo_hits.append((rel, i, line.strip()))"
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 13,
+        "snippet": "\"Today's single focus: Close highest-priority TODO\","
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 57,
+        "snippet": "\"Backlog signal: 114 TODO/FIXME markers in scanned files.\","
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 102,
+        "snippet": "\"hacker_news\": {"
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 109,
+        "snippet": "\"source\": \"Hacker News\""
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 115,
+        "snippet": "\"source\": \"Hacker News\""
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 121,
+        "snippet": "\"source\": \"Hacker News\""
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 127,
+        "snippet": "\"source\": \"Hacker News\""
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 133,
+        "snippet": "\"source\": \"Hacker News\""
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 139,
+        "snippet": "\"source\": \"Hacker News\""
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 145,
+        "snippet": "\"source\": \"Hacker News\""
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 151,
+        "snippet": "\"source\": \"Hacker News\""
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 289,
+        "snippet": "\"todo_hits\": ["
+      },
+      {
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 293,
         "snippet": "\"snippet\": \"| **2** | Pulls **live trends** (Hacker News + DEV RSS), merges \\u201cdepartment\\u201d insights, optional **GitHub API** meta |\""
       },
       {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 186,
-        "snippet": "\"snippet\": \"\\\"Backlog signal: 16 TODO/FIXME markers in scanned files.\\\",\""
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 298,
+        "snippet": "\"snippet\": \"\\\"Backlog signal: 66 TODO/FIXME markers in scanned files.\\\",\""
       },
       {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 191,
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 303,
         "snippet": "\"snippet\": \"\\\"todo_hits\\\": [\""
       },
       {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 196,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"3. **CTO** picks **one** concrete \\\\u201ctoday\\\\u2019s script\\\\u201d (refactor / TODO / CI).\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 201,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"Codebase scanner: file counts, lines, hotspots, TODOs, git activity.\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 206,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"todo_hits: list[tuple[str, int, str]] = field(default_factory=list)\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 211,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"\\\\\\\"todo_hits\\\\\\\": [\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 216,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"for p, n, s in self.todo_hits[:40]\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 221,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"TODO_RE = re.compile(r\\\\\\\"(TODO|FIXME|HACK|XXX)(\\\\\\\\s*:|)\\\\\\\", re.I)\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 226,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"if TODO_RE.search(line):\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 231,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"result.todo_hits.append((rel, i, line.strip()))\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 236,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"\\\\\\\"TODO markers indicate unfinished work.\\\\\\\" if scan.todo_hits else \\\\\\\"No TODO/FIXME in scanned files.\\\\\\\",\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 241,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"if scan.todo_hits:\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 246,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"first = scan.todo_hits[0]\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 251,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"\\\\\\\"title\\\\\\\": \\\\\\\"Close highest-priority TODO\\\\\\\",\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 256,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"\\\\\\\"script_type\\\\\\\": \\\\\\\"todo\\\\\\\",\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 261,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"if scan.todo_hits:\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 266,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"bullets.append(f\\\\\\\"Backlog signal: {len(scan.todo_hits)} TODO/FIXME markers in scanned files.\\\\\\\")\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 271,
-        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"bullets.append(\\\\\\\"No TODO/FIXME hits in scanned extensions \\\\u2014 good hygiene or narrow scan.\\\\\\\")\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 276,
-        "snippet": "\"snippet\": \"\\\"TODO markers indicate unfinished work.\\\"\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 281,
-        "snippet": "\"snippet\": \"- Backlog signal: 16 TODO/FIXME markers in scanned files.\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 286,
-        "snippet": "\"snippet\": \"- TODO markers indicate unfinished work.\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 291,
-        "snippet": "\"snippet\": \"Codebase scanner: file counts, lines, hotspots, TODOs, git activity.\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 296,
-        "snippet": "\"snippet\": \"todo_hits: list[tuple[str, int, str]] = field(default_factory=list)\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 301,
-        "snippet": "\"snippet\": \"\\\"todo_hits\\\": [\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 306,
-        "snippet": "\"snippet\": \"for p, n, s in self.todo_hits[:40]\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 311,
-        "snippet": "\"snippet\": \"TODO_RE = re.compile(r\\\"(TODO|FIXME|HACK|XXX)(\\\\s*:|)\\\", re.I)\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 316,
-        "snippet": "\"snippet\": \"if TODO_RE.search(line):\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 321,
-        "snippet": "\"snippet\": \"result.todo_hits.append((rel, i, line.strip()))\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 326,
-        "snippet": "\"snippet\": \"\\\"TODO markers indicate unfinished work.\\\" if scan.todo_hits else \\\"No TODO/FIXME in scanned files.\\\",\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 331,
-        "snippet": "\"snippet\": \"if scan.todo_hits:\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 336,
-        "snippet": "\"snippet\": \"first = scan.todo_hits[0]\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 341,
-        "snippet": "\"snippet\": \"\\\"title\\\": \\\"Close highest-priority TODO\\\",\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 346,
-        "snippet": "\"snippet\": \"\\\"script_type\\\": \\\"todo\\\",\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 351,
-        "snippet": "\"snippet\": \"Phase 2: Trend ingestion (no API keys) \\u2014 Hacker News, RSS-style dev headlines.\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 356,
-        "snippet": "\"snippet\": \"def fetch_hacker_news_top(n: int = 8) -> dict[str, Any]:\""
-      },
-      {
-        "path": "docs/ai-company/latest-report.json",
-        "line": 361,
-        "snippet": "\"snippet\": \"raw = _fetch(\\\"https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty\\\")\""
+        "path": "ops/daily_company/out/latest-report.json",
+        "line": 308,
+        "snippet": "\"snippet\": \"\\\"snippet\\\": \\\"| **2** | Pulls **live trends** (Hacker News + DEV RSS), merges \\\\u201cdepartment\\\\u201d insights, optional **GitHub API** meta |\\\"\""
       }
     ],
-    "git_commits_7d": null,
-    "git_last_commit": null
+    "git_commits_7d": 4,
+    "git_last_commit": "2026-03-23 13:32:15 -0500 docs: add LIVE_URLS for Almightybruce01/chit-chat"
   },
   "problems": [
     "Large Swift files increase merge conflict risk.",
@@ -500,17 +624,18 @@
     "Optional: set OPENAI_API_KEY for richer executive bullets."
   ],
   "todays_script": {
-    "title": "Close highest-priority TODO",
-    "rationale": "Address technical debt at AI_COMPANY_SETUP.md:10.",
+    "title": "Add security pass: Keychain review for session tokens",
+    "rationale": "Default rotation when no mega-file pressure.",
     "files_to_touch": [
-      "AI_COMPANY_SETUP.md"
+      "Chit Chat/AppState.swift",
+      "Chit Chat/LoginView.swift"
     ],
-    "script_type": "todo",
+    "script_type": "security",
     "steps": [
-      "Open file at line",
-      "Resolve or convert to GitHub issue with acceptance criteria."
+      "Audit UserDefaults vs Keychain for sensitive values.",
+      "Document threat model in ops/README.md."
     ],
-    "copy_paste_stub": "// Resolved: | **2** | Pulls **live trends** (Hacker News + DEV RSS), merges \u201cdepartment\u201d ins"
+    "copy_paste_stub": "// MARK: - Security audit notes"
   },
   "expected_impact": {
     "performance": "Focused refactors reduce compile time and state churn.",
