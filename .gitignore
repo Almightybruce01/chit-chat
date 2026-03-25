@@ -48,3 +48,6 @@ ops/daily_company/out/LATEST_REPORT.md
 *.pem
 # Firebase — download from Firebase Console → Project settings → Your apps
 Chit Chat Social/GoogleService-Info.plist
+
+# Private Worker URL for Safari webloc sync (see config/DASHBOARD_BOOKMARK_URL.example)
+config/DASHBOARD_BOOKMARK_URL

@@ -410,6 +410,7 @@
       <a href="#admin">Admin (verify &amp; users)</a>
       <a href="#links">Quick links</a>
       <a href="#cursor">Desktop &amp; Cursor</a>
+      <a href="#user-pool">User pool (Firebase)</a>
       <a href="#pipeline">AI pipeline</a>
       <div class="copy-row">
         <button type="button" id="copyDash">Copy dashboard link</button>
@@ -426,13 +427,13 @@
     <section id="admin" class="anchor grid-2">
       <div class="card elite-admin span2">
         <div class="badge-row">
-          <span class="pill">Implemented in iOS app</span>
-          <span class="pill warn">Web = guide only — real controls are in the app</span>
+          <span class="pill">iOS admin</span>
+          <span class="pill">Private Worker + Firestore</span>
         </div>
         <h2>Auto verification &amp; user control</h2>
         <p style="margin:0 0 12px;font-size:0.95rem;">
-          This is <strong>already built</strong> into <strong>Chit Chat Social</strong> as <code>AdminDashboardView</code>.
-          The website cannot read your user database; open the app on a device or Simulator while signed in as an admin.
+          <strong>In the app:</strong> <code>AdminDashboardView</code> (local directory, full controls).
+          <strong>On the private Worker:</strong> use <a href="#user-pool" style="color:var(--cyan)">User pool (Firebase)</a> below — reads/writes Firestore <code>users/{uid}</code> after the same dashboard password (service account on the server only).
         </p>
         <h3>What you can do (in the app)</h3>
         <ul>
@@ -455,6 +456,55 @@
         <p style="margin:16px 0 0;font-size:0.85rem;color:var(--muted);">
           Code reference: <code>AppState.canAccessInternalDashboard</code> · <code>PlatformExpansionViews.swift</code> · navigation title <strong>Chit Chat Social Admin</strong>.
         </p>
+      </div>
+    </section>
+
+    <section id="user-pool" class="anchor grid-2" style="margin-top:22px;" hidden>
+      <div class="card elite-admin span2">
+        <h2>User pool — Firestore</h2>
+        <p style="margin:0 0 12px;font-size:0.9rem;color:var(--muted)">
+          Search signed-in users mirrored to <code>users/{uid}</code> (app sync + Worker admin). Requires Worker secret <code>FIREBASE_SERVICE_ACCOUNT_JSON</code> and Firestore rules that let users merge their own doc.
+        </p>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">
+          <input type="search" id="user-pool-q" placeholder="Search username, email, handle…" style="flex:1;min-width:200px;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#03060c;color:var(--text);font:inherit" />
+          <button type="button" id="user-pool-refresh" style="font:inherit;font-weight:600;padding:10px 16px;border-radius:10px;border:1px solid var(--cyan);background:rgba(56,190,201,0.15);color:var(--cyan);cursor:pointer">Refresh</button>
+        </div>
+        <p id="user-pool-err" class="err" style="margin:0 0 10px" hidden></p>
+        <div style="overflow:auto;max-height:420px;border:1px solid var(--border);border-radius:12px">
+          <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+            <thead>
+              <tr style="text-align:left;background:var(--panel2)">
+                <th style="padding:10px">UID</th>
+                <th style="padding:10px">Username</th>
+                <th style="padding:10px">Display</th>
+                <th style="padding:10px">Email</th>
+                <th style="padding:10px">Verify</th>
+                <th style="padding:10px"></th>
+              </tr>
+            </thead>
+            <tbody id="user-pool-tbody"></tbody>
+          </table>
+        </div>
+        <div id="user-pool-editor" class="card" style="margin-top:16px;display:none;border:1px solid rgba(159,122,234,0.35)">
+          <h3 style="margin:0 0 10px;font-size:1rem">Edit user</h3>
+          <p style="margin:0 0 8px;font-size:0.8rem;color:var(--muted)"><code id="user-pool-edit-uid"></code></p>
+          <div class="grid-2" style="gap:10px">
+            <label>Username <input id="up-username" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:#03060c;color:var(--text)" /></label>
+            <label>Display name <input id="up-display" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:#03060c;color:var(--text)" /></label>
+            <label>Handle <input id="up-handle" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:#03060c;color:var(--text)" /></label>
+            <label>Email <input id="up-email" type="email" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:#03060c;color:var(--text)" /></label>
+            <label style="grid-column:1/-1">Verification
+              <select id="up-verify" style="width:100%;padding:8px;border-radius:8px;border:1px solid var(--border);background:#03060c;color:var(--text);font:inherit">
+                <option value="unverified">unverified</option>
+                <option value="pending">pending</option>
+                <option value="paid">paid</option>
+                <option value="verifiedInternal">verifiedInternal</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" id="user-pool-save" style="margin-top:12px;font:inherit;font-weight:700;padding:10px 18px;border-radius:10px;border:none;cursor:pointer;background:linear-gradient(135deg,var(--violet),#6b46c1);color:#fff">Save to Firestore</button>
+          <span id="user-pool-save-msg" style="margin-left:12px;font-size:0.85rem;color:var(--muted)"></span>
+        </div>
       </div>
     </section>
 
@@ -551,6 +601,117 @@
     const IS_FILE = location.protocol === 'file:';
     const USE_WORKER_AUTH = !IS_GH_PAGES && !IS_LOCAL && !IS_FILE && location.protocol === 'https:';
 
+    let userPoolCache = [];
+
+    function setupUserPoolAdmin() {
+      const tbody = document.getElementById('user-pool-tbody');
+      const errEl = document.getElementById('user-pool-err');
+      const qInput = document.getElementById('user-pool-q');
+      const editor = document.getElementById('user-pool-editor');
+      const saveMsg = document.getElementById('user-pool-save-msg');
+      if (!tbody || !USE_WORKER_AUTH) return;
+
+      async function loadUsers() {
+        errEl.hidden = true;
+        saveMsg.textContent = '';
+        const q = (qInput.value || '').trim();
+        const url = '/api/admin/users?q=' + encodeURIComponent(q) + '&limit=200';
+        let r;
+        try {
+          r = await fetch(url, { credentials: 'include' });
+        } catch (e) {
+          errEl.textContent = 'Network error loading user pool.';
+          errEl.hidden = false;
+          tbody.innerHTML = '';
+          return;
+        }
+        let data = {};
+        try { data = await r.json(); } catch (e) {}
+        if (r.status === 401) {
+          document.body.classList.add('pin-locked');
+          return;
+        }
+        if (!r.ok || !data.ok) {
+          errEl.textContent = data.error === 'firebase_admin_not_configured'
+            ? 'Firebase admin not configured — add Wrangler secret FIREBASE_SERVICE_ACCOUNT_JSON (service account JSON) to the Worker.'
+            : (data.error || ('HTTP ' + r.status));
+          errEl.hidden = false;
+          tbody.innerHTML = '';
+          return;
+        }
+        userPoolCache = data.users || [];
+        tbody.innerHTML = userPoolCache.map(function (u) {
+          const uid = String(u.uid || '');
+          return '<tr style="border-top:1px solid var(--border)">' +
+            '<td style="padding:8px;font-family:ui-monospace;font-size:0.7rem;max-width:100px;overflow:hidden;text-overflow:ellipsis" title="' + esc(uid) + '">' + esc(uid.slice(0, 12)) + '…</td>' +
+            '<td style="padding:8px">' + esc(String(u.username || '')) + '</td>' +
+            '<td style="padding:8px">' + esc(String(u.displayName || '')) + '</td>' +
+            '<td style="padding:8px;max-width:140px;overflow:hidden;text-overflow:ellipsis">' + esc(String(u.email || '')) + '</td>' +
+            '<td style="padding:8px">' + esc(String(u.verificationStatus || '')) + '</td>' +
+            '<td style="padding:8px"><button type="button" class="up-edit" data-uid="' + uid.replace(/"/g, '') + '" style="font:inherit;font-size:0.75rem;padding:6px 10px;border-radius:8px;border:1px solid var(--violet);background:rgba(159,122,234,0.12);color:var(--violet);cursor:pointer">Edit</button></td></tr>';
+        }).join('');
+      }
+
+      function openEditor(uid) {
+        const u = userPoolCache.find(function (x) { return String(x.uid) === uid; });
+        if (!u) return;
+        document.getElementById('user-pool-edit-uid').textContent = u.uid;
+        document.getElementById('up-username').value = u.username || '';
+        document.getElementById('up-display').value = u.displayName || '';
+        document.getElementById('up-handle').value = u.handle || '';
+        document.getElementById('up-email').value = u.email || '';
+        document.getElementById('up-verify').value = u.verificationStatus || 'unverified';
+        editor.style.display = 'block';
+        editor.dataset.editUid = uid;
+        saveMsg.textContent = '';
+      }
+
+      tbody.addEventListener('click', function (ev) {
+        const btn = ev.target.closest('.up-edit');
+        if (!btn) return;
+        openEditor(btn.getAttribute('data-uid'));
+      });
+
+      document.getElementById('user-pool-refresh').addEventListener('click', loadUsers);
+      qInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') loadUsers(); });
+
+      document.getElementById('user-pool-save').addEventListener('click', async function () {
+        const uid = editor.dataset.editUid;
+        if (!uid) return;
+        saveMsg.textContent = 'Saving…';
+        const body = {
+          username: document.getElementById('up-username').value.trim(),
+          displayName: document.getElementById('up-display').value.trim(),
+          handle: document.getElementById('up-handle').value.trim(),
+          email: document.getElementById('up-email').value.trim(),
+          verificationStatus: document.getElementById('up-verify').value
+        };
+        let r;
+        try {
+          r = await fetch('/api/admin/users/' + encodeURIComponent(uid), {
+            method: 'PATCH',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+        } catch (e) {
+          saveMsg.textContent = 'Network error';
+          return;
+        }
+        const j = await r.json().catch(function () { return {}; });
+        if (r.ok && j.ok) {
+          saveMsg.textContent = 'Saved.';
+          var t = document.getElementById('toast');
+          if (t) { t.textContent = 'Firestore updated'; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 2200); }
+          loadUsers();
+        } else {
+          saveMsg.textContent = (j.error || r.status) + '';
+        }
+      });
+
+      loadUsers();
+    }
+
     function mainDashboard() {
     function showToast(msg) {
       const t = document.getElementById('toast');
@@ -597,7 +758,13 @@
     document.getElementById('pin-logout').addEventListener('click', lockDashboard);
     document.getElementById('pin-logout-footer').addEventListener('click', lockDashboard);
 
-    if (['#admin', '#links', '#cursor', '#pipeline'].includes(window.location.hash)) {
+    if (USE_WORKER_AUTH) {
+      var upSec = document.getElementById('user-pool');
+      if (upSec) upSec.hidden = false;
+      setupUserPoolAdmin();
+    }
+
+    if (['#admin', '#links', '#cursor', '#pipeline', '#user-pool'].includes(window.location.hash)) {
       setTimeout(() => {
         const el = document.querySelector(window.location.hash);
         if (el) el.scrollIntoView({ behavior: 'smooth' });

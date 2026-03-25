@@ -10,6 +10,8 @@ Goal: **no report JSON in the public GitHub repo** and **no public raw GitHub UR
 4. **GitHub Actions secrets:** `CLOUDFLARE_API_TOKEN` (token needs **Workers Scripts Edit** + **Workers KV Storage Edit**), `CLOUDFLARE_ACCOUNT_ID`, `DASHBOARD_KV_NAMESPACE_ID` (same UUID as in `wrangler.toml`)
 5. **Deploy Worker:** push to `main` (workflow **Deploy dashboard Worker**) or `npm run deploy` in `dashboard-worker/`
 6. **Fill KV:** run **Daily AI Company Report** manually in Actions, or upload keys `latest-report` and `history-export` with `wrangler kv key put` (see Cloudflare docs)
+7. **User pool (Firestore):** Firebase Console → Project settings → Service accounts → **Generate new private key**. Run `npx wrangler secret put FIREBASE_SERVICE_ACCOUNT_JSON` in `dashboard-worker/` and paste the full JSON. Redeploy the Worker. Deploy Firestore rules from **`firebase/firestore.rules`** so users can merge `users/{uid}` while the Worker admin API uses the service account.
+8. **Desktop bookmark:** Copy **`config/DASHBOARD_BOOKMARK_URL.example`** to **`config/DASHBOARD_BOOKMARK_URL`**, set one line to your Worker `https://` URL from `wrangler deploy`, then run **`./scripts/sync-dashboard-webloc.sh`**.
 
 **Helper:** `./scripts/apply-dashboard-kv-id.sh YOUR_UUID` updates `wrangler.toml` (run from repo root).
 
@@ -20,6 +22,7 @@ Goal: **no report JSON in the public GitHub repo** and **no public raw GitHub UR
 | Password | Worker secret `DASHBOARD_PASSWORD` |
 | Session HMAC | Worker secret `SESSION_SECRET` |
 | Report JSON | KV keys `latest-report`, `history-export` |
+| User pool | Firestore `users/{uid}` + Worker `FIREBASE_SERVICE_ACCOUNT_JSON` |
 | Public Pages | Stub: `docs/ai-company/index.html` |
 | Local UI | `ops/daily_company/dashboard/` + `python3 -m http.server` after bootstrap |
 

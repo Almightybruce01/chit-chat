@@ -10,7 +10,7 @@ Everything in this repository is **Chit Chat Social** only — app, `docs/`, wor
 
 - **GitHub Pages (public landing only):** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) — stub + instructions; **no** report JSON is published there. See **[`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md)**.
 - **Private dashboard (bookmark after deploy):** Cloudflare Worker in **`ops/daily_company/dashboard-worker/`** — password in **Wrangler secrets**; report JSON in **Workers KV** only (not in git). Setup: **`docs/PRIVATE_DASHBOARD_SETUP.md`**.
-- **Safari bookmark:** `docs/Chit Chat Social Dashboard.webloc` — points at Pages; for the private UI, bookmark your Worker URL in the browser after deploy.
+- **Safari / Desktop bookmark:** `docs/Chit Chat Social Dashboard.webloc` (defaults to Pages stub). For the **private** Worker UI, copy `config/DASHBOARD_BOOKMARK_URL.example` → `config/DASHBOARD_BOOKMARK_URL`, paste your Worker URL, run `./scripts/sync-dashboard-webloc.sh` (updates repo weblocs + Desktop `Chit Chat Social - Live Dashboard.webloc`).
 - **Local full dashboard:** `cd ops/daily_company/dashboard && python3 -m http.server 8765` (after `./scripts/bootstrap-ai-company.sh`).
 - **Source HTML:** `ops/daily_company/dashboard/index.html` · **Deep links:** `#admin` · `#cursor` · `#pipeline`
 - **Regenerate JSON + refresh Pages HTML:** `./scripts/bootstrap-ai-company.sh` then commit + push (JSON stays under `ops/daily_company/out/` and local `dashboard/`; not copied to `docs/ai-company/`).

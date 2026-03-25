@@ -1652,6 +1652,9 @@ final class AppState: ObservableObject {
         corporateProfileVisible = corporateVisible
         mode = primaryMode
         saveProfileModeState()
+#if canImport(FirebaseAuth) && canImport(FirebaseFirestore)
+        pushChitChatUserDirectoryIfFirebaseSignedIn()
+#endif
     }
 
     func addSecondaryProfile(_ mode: PlatformMode) {
@@ -3884,6 +3887,9 @@ final class AppState: ObservableObject {
         } else {
             internalUsers.insert(currentUser, at: 0)
         }
+#if canImport(FirebaseAuth) && canImport(FirebaseFirestore)
+        pushChitChatUserDirectoryIfFirebaseSignedIn()
+#endif
     }
 
     private func canViewPost(_ post: PostItem) -> Bool {

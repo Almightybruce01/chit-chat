@@ -29,3 +29,25 @@ func saveUserToFirestore(user: User, provider: String) {
     UserDefaults.standard.set(payload, forKey: "lastSignedInUser")
 #endif
 }
+
+#if canImport(FirebaseFirestore)
+/// Merges Chit Chat profile fields into `users/{uid}` for the live admin dashboard (Firestore REST + Worker).
+func pushCurrentChitChatProfileToFirestore(firebaseUser: User, profile: UserProfile, provider: String) {
+    let db = Firestore.firestore()
+    let data: [String: Any] = [
+        "uid": firebaseUser.uid,
+        "email": firebaseUser.email ?? "",
+        "provider": provider,
+        "username": profile.username,
+        "handle": profile.handle,
+        "displayName": profile.displayName,
+        "enterpriseAlias": profile.enterpriseAlias,
+        "verificationStatus": profile.verificationStatus.rawValue,
+        "allowEnterpriseReveal": profile.allowEnterpriseReveal,
+        "isBusinessAccount": profile.isBusinessAccount,
+        "businessJobPostingApproved": profile.businessJobPostingApproved,
+        "updatedAt": FieldValue.serverTimestamp()
+    ]
+    db.collection("users").document(firebaseUser.uid).setData(data, merge: true)
+}
+#endif

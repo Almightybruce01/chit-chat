@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		B7B5982A2E0B945A005FEA70 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B7B598292E0B945A005FEA70 /* FirebaseAuth */; };
 		B7B5982C2E0B945A005FEA70 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7B5982B2E0B945A005FEA70 /* FirebaseCore */; };
+		B7B5984A2E0B945A005FEA70 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B7B598492E0B945A005FEA70 /* FirebaseFirestore */; };
 		B7B5983D2E0CDC45005FEA70 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B7B5983C2E0CDC45005FEA70 /* GoogleSignIn */; };
 /* End PBXBuildFile section */
 
@@ -59,6 +60,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B7B5982C2E0B945A005FEA70 /* FirebaseCore in Frameworks */,
+				B7B5984A2E0B945A005FEA70 /* FirebaseFirestore in Frameworks */,
 				B7B5983D2E0CDC45005FEA70 /* GoogleSignIn in Frameworks */,
 				B7B5982A2E0B945A005FEA70 /* FirebaseAuth in Frameworks */,
 			);
@@ -124,6 +126,7 @@
 			packageProductDependencies = (
 				B7B598292E0B945A005FEA70 /* FirebaseAuth */,
 				B7B5982B2E0B945A005FEA70 /* FirebaseCore */,
+				B7B598492E0B945A005FEA70 /* FirebaseFirestore */,
 				B7B5983C2E0CDC45005FEA70 /* GoogleSignIn */,
 			);
 			productName = "Chit Chat Social";
@@ -645,6 +648,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B7B598222E0B945A005FEA70 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
+		};
+		B7B598492E0B945A005FEA70 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B7B598222E0B945A005FEA70 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 		B7B5983C2E0CDC45005FEA70 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -1,4 +1,5 @@
 import dashboardHtml from "../static/index.html";
+import { getFirestoreAccessToken, listUsers, patchUserDocument } from "./firestore";
 
 const COOKIE = "ccs_sess";
 const te = new TextEncoder();
@@ -7,6 +8,8 @@ export interface Env {
   DASHBOARD_PASSWORD: string;
   SESSION_SECRET: string;
   REPORT_KV?: KVNamespace;
+  /** Full JSON of Firebase service account with Firestore access (Wrangler secret). */
+  FIREBASE_SERVICE_ACCOUNT_JSON?: string;
 }
 
 function json(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
@@ -143,6 +146,76 @@ async function proxyJson(request: Request, env: Env, kind: "report" | "history")
   });
 }
 
+async function handleAdminUsers(request: Request, env: Env, url: URL): Promise<Response> {
+  const deny = await requireSession(request, env);
+  if (deny) return deny;
+
+  const raw = env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!raw || !raw.trim()) {
+    return json({ ok: false, error: "firebase_admin_not_configured" }, 503);
+  }
+
+  const auth = await getFirestoreAccessToken(raw);
+  if (!auth) {
+    return json({ ok: false, error: "firebase_token_failed" }, 502);
+  }
+
+  if (request.method === "GET") {
+    const q = (url.searchParams.get("q") || "").trim().toLowerCase();
+    const maxOut = Math.min(500, Math.max(1, Number(url.searchParams.get("limit")) || 200));
+    const { users } = await listUsers(auth.projectId, auth.token, 200);
+    const filtered = q
+      ? users.filter((u) => {
+          const hay = [
+            String(u.username || ""),
+            String(u.displayName || ""),
+            String(u.email || ""),
+            String(u.handle || ""),
+            String(u.uid || ""),
+          ]
+            .join(" ")
+            .toLowerCase();
+          return hay.includes(q);
+        })
+      : users;
+    return json({ ok: true, users: filtered.slice(0, maxOut) });
+  }
+
+  return json({ ok: false, error: "method_not_allowed" }, 405);
+}
+
+async function handleAdminUserPatch(request: Request, env: Env, uid: string): Promise<Response> {
+  const deny = await requireSession(request, env);
+  if (deny) return deny;
+
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(uid)) {
+    return json({ ok: false, error: "invalid_uid" }, 400);
+  }
+
+  const raw = env.FIREBASE_SERVICE_ACCOUNT_JSON;
+  if (!raw || !raw.trim()) {
+    return json({ ok: false, error: "firebase_admin_not_configured" }, 503);
+  }
+
+  const auth = await getFirestoreAccessToken(raw);
+  if (!auth) {
+    return json({ ok: false, error: "firebase_token_failed" }, 502);
+  }
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return json({ ok: false, error: "bad_json" }, 400);
+  }
+
+  const result = await patchUserDocument(auth.projectId, auth.token, uid, body);
+  if (!result.ok) {
+    return json({ ok: false, error: "firestore_patch_failed", detail: result.body }, result.status);
+  }
+  return json({ ok: true });
+}
+
 const htmlSecurityHeaders: Record<string, string> = {
   "content-type": "text/html; charset=utf-8",
   "cache-control": "no-store",
@@ -161,7 +234,7 @@ export default {
       return new Response(null, {
         headers: {
           "Access-Control-Allow-Origin": url.origin,
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type",
           "Access-Control-Max-Age": "86400",
         },
@@ -201,6 +274,15 @@ export default {
 
     if (path === "/api/history-export" && request.method === "GET") {
       return proxyJson(request, env, "history");
+    }
+
+    if (path === "/api/admin/users" && request.method === "GET") {
+      return handleAdminUsers(request, env, url);
+    }
+
+    const patchUser = path.match(/^\/api\/admin\/users\/([^/]+)$/);
+    if (patchUser && request.method === "PATCH") {
+      return handleAdminUserPatch(request, env, patchUser[1]);
     }
 
     if (path === "/" && request.method === "GET") {
