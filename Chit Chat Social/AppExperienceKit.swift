@@ -67,8 +67,12 @@ extension View {
 /// Top-of-home context: greeting, locality, manual refresh (discoverability).
 struct HomeWelcomeHeader: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var permissionManager: AppPermissionManager
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var showCitySheet = false
+    @State private var manualCityDraft = ""
+    @State private var detectedCityFromLocation: String?
     var onRefresh: () -> Void
 
     private var greeting: String {
@@ -89,16 +93,30 @@ struct HomeWelcomeHeader: View {
                     .foregroundStyle(BrandPalette.adaptiveTextPrimary(for: colorScheme))
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
-                HStack(spacing: 6) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(BrandPalette.neonBlue)
-                    Text(appState.localCity)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+                Button {
+                    showCitySheet = true
+                    manualCityDraft = appState.localCity
+                    detectedCityFromLocation = nil
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "mappin.and.ellipse")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(BrandPalette.neonBlue)
+                        Text(appState.localCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Set your city" : appState.localCity)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+                        Image(systemName: "chevron.down.circle.fill")
+                            .font(.caption2)
+                            .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme).opacity(0.85))
+                    }
                 }
+                .buttonStyle(.plain)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Local city \(appState.localCity)")
+                .accessibilityLabel(
+                    appState.localCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? "Set your city"
+                        : "Local city \(appState.localCity). Tap to change."
+                )
             }
             Spacer(minLength: 8)
             Button {
@@ -115,6 +133,156 @@ struct HomeWelcomeHeader: View {
             .accessibilityHint("Updates the feed and scroll position")
         }
         .padding(.vertical, 4)
+        .sheet(isPresented: $showCitySheet) {
+            NavigationStack {
+                VStack(alignment: .leading, spacing: 18) {
+                    Text("Your city filters the For You feed to nearby posts. Following and Close Friends ignore this. Deny location anytime and type a city manually.")
+                        .font(.subheadline)
+                        .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+
+                    Button {
+                        permissionManager.requestLocationForCityOnly()
+                    } label: {
+                        Label("Use my approximate location", systemImage: "location.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(BrandPalette.neonBlue)
+
+                    if permissionManager.locationStatus == .denied || permissionManager.locationStatus == .restricted {
+                        Text("Location is off — enter your city below, or enable Location in Settings if you change your mind.")
+                            .font(.caption)
+                            .foregroundStyle(.orange.opacity(0.95))
+                    }
+
+                    if let detected = detectedCityFromLocation, !detected.isEmpty {
+                        Button {
+                            appState.setLocalCity(detected)
+                            manualCityDraft = detected
+                            detectedCityFromLocation = nil
+                            showCitySheet = false
+                        } label: {
+                            Label("Use detected city: \(detected)", systemImage: "checkmark.circle.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+
+                    Text("We never post your exact address — only the city name you save.")
+                        .font(.caption)
+                        .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Enter city manually")
+                            .font(.caption.bold())
+                            .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+                        TextField("e.g. Austin", text: $manualCityDraft)
+                            .textFieldStyle(.roundedBorder)
+                            .textInputAutocapitalization(.words)
+                    }
+
+                    HStack {
+                        Button("Save city") {
+                            let t = manualCityDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !t.isEmpty {
+                                appState.setLocalCity(t)
+                            }
+                            showCitySheet = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                        Spacer()
+                        Button("Not now") {
+                            showCitySheet = false
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                }
+                .padding(20)
+                .navigationTitle("Local area")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { showCitySheet = false }
+                    }
+                }
+                .onChange(of: permissionManager.latestCity) { _, newValue in
+                    guard let newValue, !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                    detectedCityFromLocation = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    manualCityDraft = detectedCityFromLocation ?? ""
+                }
+            }
+            .presentationDetents([.medium, .large])
+        }
+    }
+}
+
+// MARK: - Suggested friends (home)
+
+struct SuggestedFriendsStrip: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var rows: [SuggestedConnection] {
+        appState.suggestedConnections(limit: 14)
+    }
+
+    var body: some View {
+        if rows.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    FuturisticSectionHeader(
+                        title: "People you may know",
+                        subtitle: "From contacts (after sync), friends of friends, and linked networks."
+                    )
+                    Spacer(minLength: 8)
+                    NavigationLink {
+                        ConnectionsView(initialTab: 2)
+                            .environmentObject(appState)
+                    } label: {
+                        Text("See all")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(BrandPalette.neonBlue)
+                    }
+                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(rows.prefix(10)) { suggestion in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(suggestion.user.handle)
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(BrandPalette.adaptiveTextPrimary(for: colorScheme))
+                                    .lineLimit(1)
+                                Text(appState.suggestedConnectionDetailLine(for: suggestion))
+                                    .font(.caption2)
+                                    .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Button("Follow") {
+                                    appState.follow(suggestion.user.handle)
+                                }
+                                .font(.caption.bold())
+                                .buttonStyle(.borderedProminent)
+                                .tint(BrandPalette.neonGreen)
+                                .controlSize(.small)
+                            }
+                            .padding(12)
+                            .frame(width: 168, alignment: .leading)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .fill(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.92))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: 1)
+                            )
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
     }
 }
 

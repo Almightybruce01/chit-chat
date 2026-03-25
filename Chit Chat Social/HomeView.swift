@@ -59,6 +59,9 @@ struct HomeView: View {
                             sort: $selectedSortMode
                         )
 
+                        SuggestedFriendsStrip()
+                            .environmentObject(appState)
+
                         FuturisticSectionHeader(
                             title: "Today",
                             subtitle: "Stories, market, quick post, then your live feed."
@@ -1358,9 +1361,18 @@ struct FeedView: View {
                                     .foregroundStyle(BrandPalette.neonBlue)
                             }
                             Spacer()
-                            Text(post.city)
-                                .font(.caption2)
-                                .foregroundStyle(BrandPalette.neonGreen)
+                            Group {
+                                let c = post.city.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if c.isEmpty {
+                                    Text("Anywhere")
+                                        .font(.caption2)
+                                        .foregroundStyle(secondaryText.opacity(0.75))
+                                } else {
+                                    Text(c)
+                                        .font(.caption2)
+                                        .foregroundStyle(BrandPalette.neonGreen)
+                                }
+                            }
                             Spacer().frame(width: 8)
                             Text(post.type.rawValue.capitalized)
                                 .font(.caption)
@@ -1868,6 +1880,7 @@ struct FeedView: View {
 struct ChatPostsFeedView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
+    private var secondaryText: Color { BrandPalette.adaptiveTextSecondary(for: colorScheme) }
     let isFollowingOnly: Bool
     let sortMode: FeedSortMode
     @State private var composeTarget: PostItem?
@@ -1897,9 +1910,18 @@ struct ChatPostsFeedView: View {
                                     .foregroundStyle(BrandPalette.neonBlue)
                             }
                             Spacer()
-                            Text(post.city)
-                                .font(.caption2)
-                                .foregroundStyle(BrandPalette.neonBlue)
+                            Group {
+                                let c = post.city.trimmingCharacters(in: .whitespacesAndNewlines)
+                                if c.isEmpty {
+                                    Text("Anywhere")
+                                        .font(.caption2)
+                                        .foregroundStyle(secondaryText.opacity(0.75))
+                                } else {
+                                    Text(c)
+                                        .font(.caption2)
+                                        .foregroundStyle(BrandPalette.neonBlue)
+                                }
+                            }
                         }
                         Text(post.caption)
                             .font(.body)
@@ -2077,6 +2099,7 @@ private struct LoopingVideoDataView: View {
     @State private var looper: AVPlayerLooper?
     @State private var resolvedURL: URL?
     @State private var loadFailed = false
+    @State private var isPreparingFile = false
 
     var body: some View {
         ZStack {
@@ -2115,26 +2138,33 @@ private struct LoopingVideoDataView: View {
     }
 
     private func prepareAndPlayIfNeeded() {
-        guard looper == nil else { return }
+        guard looper == nil, !isPreparingFile else { return }
+        isPreparingFile = true
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         let url = caches.appendingPathComponent("chitchat-reel-\(postID.uuidString).mp4", isDirectory: false)
-        if !FileManager.default.fileExists(atPath: url.path) {
-            do {
-                try videoData.write(to: url, options: [.atomic])
-            } catch {
+        let data = videoData
+        Task { @MainActor in
+            defer { isPreparingFile = false }
+            let fileReady = await Task.detached(priority: .userInitiated) {
+                do {
+                    if !FileManager.default.fileExists(atPath: url.path) {
+                        try data.write(to: url, options: [.atomic])
+                    }
+                    return FileManager.default.fileExists(atPath: url.path)
+                } catch {
+                    return false
+                }
+            }.value
+            guard fileReady else {
                 loadFailed = true
                 return
             }
+            resolvedURL = url
+            let item = AVPlayerItem(url: url)
+            looper = AVPlayerLooper(player: player, templateItem: item)
+            player.isMuted = isMuted
+            player.play()
         }
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            loadFailed = true
-            return
-        }
-        resolvedURL = url
-        let item = AVPlayerItem(url: url)
-        looper = AVPlayerLooper(player: player, templateItem: item)
-        player.isMuted = isMuted
-        player.play()
     }
 }
 
@@ -2230,7 +2260,7 @@ struct ReelsView: View {
                     ForEach(Array(safeReelItems.enumerated()), id: \.element.id) { index, item in
                         ViolenceWarningGate(postID: item.id, isRequired: item.violenceWarningRequired) {
                         ZStack(alignment: .bottom) {
-                            reelBackground(for: item)
+                            reelBackground(for: item, playbackActive: index == selectedIndex)
                                 .overlay {
                                     if heartPulseReelID == item.id {
                                         Image(systemName: "heart.fill")
@@ -2305,11 +2335,9 @@ struct ReelsView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .ignoresSafeArea()
-                .onChange(of: safeReelItems.count) { _, newCount in
+                .onChange(of: safeReelItems.count) { _, _ in
                     selectedIndex = safeReelItems.clampedIndex(selectedIndex)
-                }
-                .onChange(of: safeReelItems.map(\.id)) { _, ids in
-                    if let target = inlineCommentsTarget, !ids.contains(target.id) {
+                    if let target = inlineCommentsTarget, !safeReelItems.contains(where: { $0.id == target.id }) {
                         inlineCommentsTarget = nil
                     }
                 }
@@ -2699,7 +2727,7 @@ struct ReelsView: View {
                 likeCount: post.likeCount,
                 commentCount: post.commentCount,
                 shareCount: post.repostCount,
-                imageData: post.imageData ?? appState.generatedMediaImageData(seed: "\(post.authorHandle)-\(post.id.uuidString)", isReel: true),
+                imageData: post.imageData,
                 videoData: post.videoData,
                 remoteImageURL: nil,
                 remoteVideoURL: nil,
@@ -2709,15 +2737,33 @@ struct ReelsView: View {
     }
 
     @ViewBuilder
-    private func reelBackground(for item: ReelDemoItem) -> some View {
+    private func reelBackground(for item: ReelDemoItem, playbackActive: Bool) -> some View {
         if let vData = item.videoData, !vData.isEmpty {
-            LoopingVideoDataView(videoData: vData, postID: item.id, isMuted: $reelsMuted)
-                .ignoresSafeArea()
-                .id(item.id)
+            if playbackActive {
+                LoopingVideoDataView(videoData: vData, postID: item.id, isMuted: $reelsMuted)
+                    .ignoresSafeArea()
+                    .id(item.id)
+            } else if let data = item.imageData, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+            } else {
+                Color.black.ignoresSafeArea()
+            }
         } else if let remoteVideoURL = item.remoteVideoURL {
-            LoopingVideoView(url: remoteVideoURL, isMuted: $reelsMuted)
-                .ignoresSafeArea()
-                .id(item.id)
+            if playbackActive {
+                LoopingVideoView(url: remoteVideoURL, isMuted: $reelsMuted)
+                    .ignoresSafeArea()
+                    .id(item.id)
+            } else if let data = item.imageData, let image = UIImage(data: data) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .ignoresSafeArea()
+            } else {
+                Color.black.ignoresSafeArea()
+            }
         } else if let remoteImageURL = item.remoteImageURL {
             AsyncImage(url: remoteImageURL) { phase in
                 switch phase {

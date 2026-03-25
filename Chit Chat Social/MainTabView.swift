@@ -27,6 +27,7 @@ struct MainTabView: View {
             tabContent(index: 3)
             tabContent(index: 4)
         }
+        .environmentObject(permissionManager)
         .id(appState.mode)
         .animation(MotionTokens.spring, value: appState.mode)
         .toolbar(.hidden, for: .tabBar)
@@ -170,10 +171,6 @@ struct MainTabView: View {
             guard !hasRequestedCorePermissions else { return }
             permissionManager.requestAllPermissions()
             hasRequestedCorePermissions = true
-        }
-        .onChange(of: permissionManager.latestCity) { _, newCity in
-            guard let newCity, !newCity.isEmpty else { return }
-            appState.setLocalCity(newCity)
         }
         .onChange(of: appState.mode) { _, _ in
             withAnimation(MotionTokens.spring) {

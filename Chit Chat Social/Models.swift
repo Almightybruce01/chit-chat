@@ -675,6 +675,9 @@ struct PublicPulsePost: Identifiable, Codable {
 struct SuggestedConnection: Identifiable {
     let user: UserProfile
     let mutualCount: Int
+    var matchedFromContacts: Bool = false
+    var friendsOfFriends: Bool = false
+    var sharedNetworksCount: Int = 0
     var id: UUID { user.id }
 }
 

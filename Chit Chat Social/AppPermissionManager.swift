@@ -21,6 +21,21 @@ final class AppPermissionManager: NSObject, ObservableObject, CLLocationManagerD
         requestCameraAccess()
     }
 
+    /// Call from the city picker — requests auth if needed, then a one-shot location fix for reverse geocoding.
+    func requestLocationForCityOnly() {
+        locationStatus = locationManager.authorizationStatus
+        switch locationStatus {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse:
+            locationManager.requestLocation()
+        case .denied, .restricted:
+            latestCity = nil
+        @unknown default:
+            break
+        }
+    }
+
     private func requestLocationAccess() {
         locationStatus = locationManager.authorizationStatus
         if locationStatus == .notDetermined {

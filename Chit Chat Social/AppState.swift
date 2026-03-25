@@ -28,6 +28,7 @@ final class AppState: ObservableObject {
     private let executionQueueRestorePointStoragePrefix = "chitchat.execution.queue.restorepoint."
     private let storySeenStoragePrefix = "chitchat.story.seen."
     private let profileModeStateStoragePrefix = "chitchat.profile.mode.state."
+    private let localCityStorageKey = "chitchat.local.city.v1"
     private let interestStateStoragePrefix = "chitchat.interests."
     private let reelCollectionStoragePrefix = "chitchat.reel.collections."
     private let exploreSignalStoragePrefix = "chitchat.explore.signals."
@@ -60,7 +61,7 @@ final class AppState: ObservableObject {
             caption: "Welcome to the ultimate social media app.",
             type: .post,
             createdAt: Date(),
-            city: "Dallas",
+            city: "",
             isCollab: false
         ),
         PostItem(
@@ -69,7 +70,7 @@ final class AppState: ObservableObject {
             caption: "Going live tonight. Song queue is open.",
             type: .reel,
             createdAt: Date().addingTimeInterval(-1800),
-            city: "Dallas",
+            city: "",
             isCollab: true
         )
     ]
@@ -241,7 +242,7 @@ final class AppState: ObservableObject {
     @Published private var profileStoryImageByUsername: [String: Data] = [:]
     @Published private var profileStoryVideoByUsername: [String: Data] = [:]
     @Published private var profileStoryGIFByUsername: [String: Data] = [:]
-    @Published var localCity = "Dallas"
+    @Published var localCity = ""
     @Published var followingHandles: Set<String> = ["@chitchat", "@djmike", "@creatorone"]
     @Published var followerHandles: Set<String> = ["@fan_aria", "@fan_ray", "@coachmia"]
     @Published var enterpriseFollowingHandles: Set<String> = ["@techlane", "@citynova", "@travelrue"]
@@ -301,7 +302,7 @@ final class AppState: ObservableObject {
         yearsExperience: 4
     )
     @Published var contracts: [ContractDeal] = [
-        ContractDeal(id: UUID(), title: "Event DJ Host", budgetUSD: 1200, location: "Dallas", isLocalHire: true),
+        ContractDeal(id: UUID(), title: "Event DJ Host", budgetUSD: 1200, location: "Local", isLocalHire: true),
         ContractDeal(id: UUID(), title: "Brand Reel Campaign", budgetUSD: 4000, location: "Remote", isLocalHire: false)
     ]
     @Published var marketListings: [MarketListing] = [
@@ -420,6 +421,7 @@ final class AppState: ObservableObject {
             enableAllSuperFeatures()
         }
         ensurePostMediaCoverage()
+        loadLocalCityFromDefaults()
         registerLoggedInAccount(currentUser.username)
     }
 
@@ -508,7 +510,7 @@ final class AppState: ObservableObject {
                         ),
                         type: type,
                         createdAt: createdAt,
-                        city: "Dallas",
+                        city: "",
                         imageData: imageData,
                         likeCount: Int.random(in: 4...380),
                         commentCount: generatedComments.count,
@@ -2479,6 +2481,10 @@ final class AppState: ObservableObject {
 
     func suggestedConnections(limit: Int = 10) -> [SuggestedConnection] {
         let myFollowing = socialGraph[currentUser.handle, default: []].union(activeFollowingHandles)
+        let friendsOfFriendHandles: Set<String> = Set(myFollowing.flatMap { socialGraph[$0, default: []] })
+            .subtracting([currentUser.handle])
+            .subtracting(myFollowing)
+
         let candidates = internalUsers.filter {
             $0.handle != currentUser.handle
             && !myFollowing.contains($0.handle)
@@ -2488,31 +2494,71 @@ final class AppState: ObservableObject {
         let suggestions = candidates.map { user in
             let userFollowing = socialGraph[user.handle, default: []]
             let mutual = myFollowing.intersection(userFollowing).count
-            return SuggestedConnection(user: user, mutualCount: mutual)
+            let contact = matchedContactHandles.contains(user.handle)
+            let fof = friendsOfFriendHandles.contains(user.handle)
+            let networks = user.linkedPlatforms.filter { currentUser.linkedPlatforms.contains($0) }.count
+            return SuggestedConnection(
+                user: user,
+                mutualCount: mutual,
+                matchedFromContacts: contact,
+                friendsOfFriends: fof,
+                sharedNetworksCount: networks
+            )
         }
         .sorted { lhs, rhs in
-            if lhs.mutualCount == rhs.mutualCount {
-                return lhs.user.followers > rhs.user.followers
+            if lhs.matchedFromContacts != rhs.matchedFromContacts {
+                return lhs.matchedFromContacts && !rhs.matchedFromContacts
             }
-            return lhs.mutualCount > rhs.mutualCount
+            if lhs.friendsOfFriends != rhs.friendsOfFriends {
+                return lhs.friendsOfFriends && !rhs.friendsOfFriends
+            }
+            if lhs.mutualCount != rhs.mutualCount {
+                return lhs.mutualCount > rhs.mutualCount
+            }
+            if lhs.sharedNetworksCount != rhs.sharedNetworksCount {
+                return lhs.sharedNetworksCount > rhs.sharedNetworksCount
+            }
+            return lhs.user.followers > rhs.user.followers
         }
 
         return Array(suggestions.prefix(limit))
     }
 
-    func syncContacts(displayNames: [String], identifiers: [String]) {
+    func syncContacts(displayNames: [String], identifiers: [String], contactPhones: [String] = []) {
         let lowered = displayNames.map { $0.lowercased() }
-        let matches = internalUsers.filter { user in
-            lowered.contains(where: { contact in
-                user.displayName.lowercased() == contact
-                || user.username.lowercased() == contact
-                || user.handle.lowercased().contains(contact)
-            })
+        let phoneSet = Set(contactPhones.map { phoneNormalizedLast10($0) }.filter { $0.count == 10 })
+
+        var handles = Set(
+            internalUsers.filter { user in
+                user.handle != currentUser.handle
+                    && lowered.contains(where: { contact in
+                        user.displayName.lowercased() == contact
+                            || user.username.lowercased() == contact
+                            || user.handle.lowercased().contains(contact)
+                    })
+            }.map(\.handle)
+        )
+
+        if !phoneSet.isEmpty {
+            for user in internalUsers where user.handle != currentUser.handle {
+                let uDigits = user.username.filter(\.isNumber)
+                if uDigits.count >= 10, phoneSet.contains(String(uDigits.suffix(10))) {
+                    handles.insert(user.handle)
+                }
+            }
         }
-        matchedContactHandles = Set(matches.map(\.handle))
-        contactsSyncStatus = matches.isEmpty
+
+        matchedContactHandles = handles
+        let count = handles.count
+        contactsSyncStatus = count == 0
             ? "No matching contacts found in Chit Chat Social yet."
-            : "Found \(matches.count) contacts on Chit Chat Social."
+            : "Found \(count) contacts on Chit Chat Social."
+    }
+
+    private func phoneNormalizedLast10(_ raw: String) -> String {
+        let d = raw.filter(\.isNumber)
+        guard !d.isEmpty else { return "" }
+        return String(d.suffix(10))
     }
 
     var activeFollowingHandles: Set<String> {
@@ -2588,7 +2634,12 @@ final class AppState: ObservableObject {
         if isFollowingOnly {
             scoped = visible.filter { activeFollowingHandles.contains($0.authorHandle) || $0.authorHandle == currentUser.handle }
         } else {
-            scoped = visible.filter { $0.city.caseInsensitiveCompare(localCity) == .orderedSame }
+            let cityKey = localCity.trimmingCharacters(in: .whitespacesAndNewlines)
+            if cityKey.isEmpty {
+                scoped = visible
+            } else {
+                scoped = visible.filter { $0.city.caseInsensitiveCompare(cityKey) == .orderedSame }
+            }
         }
         let tuned = scoped.sorted { interestMatchScore(for: $0) > interestMatchScore(for: $1) }
         return sortFeed(tuned, sortMode: sortMode)
@@ -3450,6 +3501,41 @@ final class AppState: ObservableObject {
         let trimmed = city.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         localCity = trimmed
+        UserDefaults.standard.set(trimmed, forKey: localCityStorageKey)
+    }
+
+    private func loadLocalCityFromDefaults() {
+        let s = UserDefaults.standard.string(forKey: localCityStorageKey)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !s.isEmpty {
+            localCity = s
+        }
+    }
+
+    /// Why someone appears in Suggested (contacts, mutual friends, linked platforms).
+    func suggestedConnectionDetailLine(for suggestion: SuggestedConnection) -> String {
+        let mutual = suggestion.mutualCount
+        if suggestion.matchedFromContacts {
+            if mutual > 0 { return "From your contacts · \(mutual) mutual friend\(mutual == 1 ? "" : "s")" }
+            return "Matched from your phone contacts"
+        }
+        if suggestion.friendsOfFriends {
+            if mutual > 0 {
+                return "Friend of someone you follow · \(mutual) mutual connection\(mutual == 1 ? "" : "s")"
+            }
+            return "Friend of someone you follow"
+        }
+        let overlap = suggestion.sharedNetworksCount
+        if mutual > 0, overlap > 0 {
+            return "\(mutual) mutual friend\(mutual == 1 ? "" : "s") · \(overlap) linked network\(overlap == 1 ? "" : "s") in common"
+        }
+        if mutual > 0 {
+            return "\(mutual) mutual friend\(mutual == 1 ? "" : "s")"
+        }
+        if overlap > 0 {
+            return "\(overlap) linked platform\(overlap == 1 ? "" : "s") in common"
+        }
+        return "Suggested based on your network"
     }
 
     func markVerificationEmailSent() {

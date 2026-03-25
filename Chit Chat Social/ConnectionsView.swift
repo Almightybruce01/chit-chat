@@ -106,7 +106,7 @@ struct ConnectionsView: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(suggestion.user.handle).font(.headline)
-                                        Text("\(suggestion.mutualCount) mutual follows")
+                                        Text(appState.suggestedConnectionDetailLine(for: suggestion))
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
@@ -163,7 +163,11 @@ struct ConnectionsView: View {
                 .background(Color.clear)
             }
             .onChange(of: contactSync.displayNames) { _, names in
-                appState.syncContacts(displayNames: names, identifiers: contactSync.identifiers)
+                appState.syncContacts(
+                    displayNames: names,
+                    identifiers: contactSync.identifiers,
+                    contactPhones: contactSync.normalizedPhones
+                )
             }
         }
         .navigationTitle(appState.mode == .enterprise ? "Corporate Network" : "Connections")
