@@ -238,6 +238,18 @@ struct AppSession: Codable, Equatable {
     var lastValidatedAt: Date
 }
 
+struct BusinessRegistration: Equatable, Sendable {
+    var ein: String
+    var legalName: String
+    var dba: String
+    var addressLine1: String
+    var city: String
+    var state: String
+    var zip: String
+    var phone: String
+    var website: String
+}
+
 struct UserProfile: Identifiable, Codable {
     let id: UUID
     var username: String
@@ -254,6 +266,16 @@ struct UserProfile: Identifiable, Codable {
     /// Business accounts must be approved to post jobs.
     var isBusinessAccount: Bool = false
     var businessJobPostingApproved: Bool = false
+    /// U.S. EIN formatted as XX-XXXXXXX when provided.
+    var businessEIN: String = ""
+    var businessLegalName: String = ""
+    var businessDBA: String = ""
+    var businessAddressLine1: String = ""
+    var businessCity: String = ""
+    var businessState: String = ""
+    var businessZIP: String = ""
+    var businessPhone: String = ""
+    var businessWebsite: String = ""
 }
 
 struct PostItem: Identifiable, Codable {

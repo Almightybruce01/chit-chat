@@ -46,6 +46,15 @@ func pushCurrentChitChatProfileToFirestore(firebaseUser: User, profile: UserProf
         "allowEnterpriseReveal": profile.allowEnterpriseReveal,
         "isBusinessAccount": profile.isBusinessAccount,
         "businessJobPostingApproved": profile.businessJobPostingApproved,
+        "businessEIN": profile.businessEIN,
+        "businessLegalName": profile.businessLegalName,
+        "businessDBA": profile.businessDBA,
+        "businessAddressLine1": profile.businessAddressLine1,
+        "businessCity": profile.businessCity,
+        "businessState": profile.businessState,
+        "businessZIP": profile.businessZIP,
+        "businessPhone": profile.businessPhone,
+        "businessWebsite": profile.businessWebsite,
         "updatedAt": FieldValue.serverTimestamp()
     ]
     db.collection("users").document(firebaseUser.uid).setData(data, merge: true)

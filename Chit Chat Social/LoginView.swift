@@ -17,21 +17,36 @@ private enum AuthMode: String, CaseIterable {
     case logIn = "Log In"
 }
 
+private enum AccountPortal: String, CaseIterable, Identifiable {
+    case social = "Social"
+    case business = "Business"
+    var id: String { rawValue }
+}
+
 struct LoginView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingProviderAlert = false
     @State private var providerMessage = ""
-    @State private var username = "Almighty_Bruce_"
-    @State private var password = "Yzesati01!"
+    @State private var username = ""
+    @State private var password = ""
     @State private var wantsUpdateEmails = true
     @State private var showMoreOptions = false
     @State private var authMode: AuthMode = .logIn
     @State private var currentNonce: String?
-    @State private var primaryProfileMode: PlatformMode = .social
-    @State private var createSecondaryProfile = false
-    @State private var socialVisible = true
-    @State private var corporateVisible = true
+    @State private var accountPortal: AccountPortal = .social
+    /// Shown for creator sign-up; corporate mode still uses real name for jobs / EIN flow.
+    @State private var personalRealName = ""
+    // Business registration (required for business sign-up)
+    @State private var businessEIN = ""
+    @State private var businessLegalName = ""
+    @State private var businessDBA = ""
+    @State private var businessAddress = ""
+    @State private var businessCity = ""
+    @State private var businessState = ""
+    @State private var businessZIP = ""
+    @State private var businessPhone = ""
+    @State private var businessWebsite = ""
 
     var body: some View {
         ZStack {
@@ -41,21 +56,27 @@ struct LoginView: View {
                     AppLogoView(size: 150, cornerRadius: 20)
                         .padding(.top, 30)
 
-                    Text("Welcome to Chit Chat Social")
+                    Text(accountPortal == .social ? "Chit Chat Social" : "Chit Chat Corporate")
                         .font(.largeTitle.bold())
                         .multilineTextAlignment(.center)
-                        .foregroundStyle(primaryText)
+                        .foregroundStyle(portalAccent)
 
-                    Text("The statement platform for social and enterprise.")
+                    Text(portalSubtitle)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
                         .foregroundStyle(secondaryText)
+                        .padding(.horizontal, 8)
+
+                    accountPortalToggle
+                        .padding(.vertical, 4)
 
                     launchQualityStrip
 
                     EliteCard {
-                        VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 12) {
                             FuturisticSectionHeader(
-                                title: "Sign in to your universe",
-                                subtitle: "Social vibes + corporate power in one identity stack."
+                                title: authMode == .signUp ? portalSignUpTitle : portalLoginTitle,
+                                subtitle: portalCardSubtitle
                             )
                             Picker("Auth mode", selection: $authMode) {
                                 ForEach(AuthMode.allCases, id: \.self) { mode in
@@ -64,44 +85,117 @@ struct LoginView: View {
                             }
                             .pickerStyle(.segmented)
 
-                            Text("Create your username")
-                                .font(.headline)
-                                .foregroundStyle(primaryText)
-                            TextField("username (required)", text: $username)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .padding(10)
-                                .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .foregroundStyle(primaryText)
-                            SecureField("password (required)", text: $password)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .padding(10)
-                                .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                                .foregroundStyle(primaryText)
-                            Toggle("Get app update emails", isOn: $wantsUpdateEmails)
-                                .foregroundStyle(primaryText)
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Choose your primary profile")
+                            Group {
+                                Text("Username — your @handle on the social side")
                                     .font(.subheadline.bold())
                                     .foregroundStyle(primaryText)
-                                Picker("Primary profile", selection: $primaryProfileMode) {
-                                    Text("Social").tag(PlatformMode.social)
-                                    Text("Corporate").tag(PlatformMode.enterprise)
-                                }
-                                .pickerStyle(.segmented)
-                                Toggle("Create optional second profile now", isOn: $createSecondaryProfile)
+                                TextField("Unique username (required)", text: $username)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
                                     .foregroundStyle(primaryText)
-                                Toggle("Social profile visible", isOn: $socialVisible)
+                                SecureField("Password (8+ characters)", text: $password)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(primaryText)
+                            }
+
+                            if authMode == .signUp && accountPortal == .social {
+                                Text("Real name (optional)")
+                                    .font(.caption.bold())
                                     .foregroundStyle(secondaryText)
-                                Toggle("Corporate profile visible", isOn: $corporateVisible)
+                                TextField("How you appear in Corporate / jobs", text: $personalRealName)
+                                    .textInputAutocapitalization(.words)
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(primaryText)
+                                Text("You get both Social and Corporate workspaces. Social shows your username; Corporate uses this name when you browse jobs.")
+                                    .font(.caption2)
                                     .foregroundStyle(secondaryText)
                             }
-                            Text("Everyone must have a unique username.")
+
+                            if authMode == .signUp && accountPortal == .business {
+                                Text("Business & tax identity")
+                                    .font(.headline)
+                                    .foregroundStyle(primaryText)
+                                TextField("EIN — 9 digits (e.g. 12-3456789)", text: $businessEIN)
+                                    .keyboardType(.numbersAndPunctuation)
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(primaryText)
+                                TextField("Legal entity name (required)", text: $businessLegalName)
+                                    .textInputAutocapitalization(.words)
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(primaryText)
+                                TextField("DBA / trade name (optional)", text: $businessDBA)
+                                    .textInputAutocapitalization(.words)
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(primaryText)
+                                TextField("Street address", text: $businessAddress)
+                                    .textInputAutocapitalization(.words)
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(primaryText)
+                                HStack(spacing: 8) {
+                                    TextField("City", text: $businessCity)
+                                        .textInputAutocapitalization(.words)
+                                        .padding(10)
+                                        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .foregroundStyle(primaryText)
+                                    TextField("ST", text: $businessState)
+                                        .textInputAutocapitalization(.characters)
+                                        .autocorrectionDisabled()
+                                        .padding(10)
+                                        .frame(width: 56)
+                                        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .foregroundStyle(primaryText)
+                                    TextField("ZIP", text: $businessZIP)
+                                        .keyboardType(.numbersAndPunctuation)
+                                        .padding(10)
+                                        .frame(minWidth: 72)
+                                        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .foregroundStyle(primaryText)
+                                }
+                                TextField("Business phone", text: $businessPhone)
+                                    .keyboardType(.phonePad)
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(primaryText)
+                                TextField("Website https://… (optional)", text: $businessWebsite)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .padding(10)
+                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.85))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    .foregroundStyle(primaryText)
+                                Text("Your username is still your public @handle for reels and DMs. Corporate surfaces use your legal / DBA name.")
+                                    .font(.caption2)
+                                    .foregroundStyle(secondaryText)
+                            }
+
+                            Toggle("Product update emails", isOn: $wantsUpdateEmails)
+                                .foregroundStyle(primaryText)
+
+                            Text("Everyone gets Social + Corporate. Switch modes anytime after sign-in.")
                                 .font(.caption)
                                 .foregroundStyle(secondaryText)
+
                             Button(authMode == .signUp ? "Create account" : "Log in") {
                                 primaryAuthAction()
                             }
@@ -113,7 +207,7 @@ struct LoginView: View {
                     Button(action: googleLogin) {
                         authButtonLabel(title: "Continue with Google", icon: "globe")
                     }
-                    .disabled(usernameIncomplete)
+                    .disabled(thirdPartyAuthDisabled)
 
                     SignInWithAppleButton(
                         onRequest: { request in
@@ -134,7 +228,15 @@ struct LoginView: View {
                     .signInWithAppleButtonStyle(.black)
                     .frame(height: 50)
                     .cornerRadius(10)
-                    .disabled(usernameIncomplete)
+                    .disabled(thirdPartyAuthDisabled)
+
+                    if authMode == .signUp && accountPortal == .business {
+                        Text("Business sign-up needs your EIN and entity details — use email & password above (not Google/Apple).")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 8)
+                    }
 
                     Button(action: emailLogin) {
                         authButtonLabel(title: "Continue with Email", icon: "envelope.fill")
@@ -240,7 +342,117 @@ struct LoginView: View {
         BrandPalette.adaptiveTextSecondary(for: colorScheme)
     }
 
+    private var portalAccent: Color {
+        accountPortal == .social ? BrandPalette.neonBlue : BrandPalette.accentPurple
+    }
+
+    private var portalSubtitle: String {
+        accountPortal == .social
+            ? "One login, two modes: scroll the feed, then switch to Corporate for jobs and hiring — same account."
+            : "Register your business with EIN + entity details. Your @username still powers the social side; legal name powers hiring."
+    }
+
+    private var portalSignUpTitle: String {
+        accountPortal == .social ? "Create your creator account" : "Register your business"
+    }
+
+    private var portalLoginTitle: String {
+        accountPortal == .social ? "Welcome back, creator" : "Business login"
+    }
+
+    private var portalCardSubtitle: String {
+        authMode == .signUp
+            ? (accountPortal == .social
+                ? "You will have Social + Corporate automatically. Username shows on the social app."
+                : "Required: EIN, legal name, address, and phone. Username is still required for social.")
+            : (accountPortal == .social
+                ? "Same password for both modes."
+                : "Use the username and password you set at registration.")
+    }
+
+    private var thirdPartyAuthDisabled: Bool {
+        usernameIncomplete || (authMode == .signUp && accountPortal == .business)
+    }
+
+    private var accountPortalToggle: some View {
+        HStack(spacing: 0) {
+            ForEach(AccountPortal.allCases) { portal in
+                let selected = accountPortal == portal
+                Button {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                        accountPortal = portal
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: portal == .social ? "sparkles.rectangle.stack.fill" : "building.2.crop.circle.fill")
+                            .font(.title2)
+                        Text(portal == .social ? "Creator" : "Business")
+                            .font(.caption.weight(.heavy))
+                        Text(portal == .social ? "Social first" : "EIN & jobs")
+                            .font(.caption2)
+                            .multilineTextAlignment(.center)
+                            .opacity(0.88)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .foregroundStyle(selected ? Color.white : primaryText.opacity(0.92))
+                    .background {
+                        if selected {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(portalGradient(for: portal))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(5)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.45))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [portalAccent.opacity(0.5), BrandPalette.neonGreen.opacity(0.35)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.2
+                )
+        )
+    }
+
+    private func portalGradient(for portal: AccountPortal) -> LinearGradient {
+        if portal == .social {
+            return LinearGradient(
+                colors: [BrandPalette.neonBlue, BrandPalette.neonGreen.opacity(0.92)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
+        return LinearGradient(
+            colors: [BrandPalette.accentPurple.opacity(0.95), BrandPalette.neonBlue.opacity(0.75)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private func applyPortalProfileDefaults() {
+        appState.configurePrimaryProfile(
+            primaryMode: accountPortal == .business ? .enterprise : .social,
+            socialVisible: true,
+            corporateVisible: true,
+            createSecondary: true
+        )
+    }
+
     func googleLogin() {
+        if authMode == .signUp && accountPortal == .business {
+            presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
+            return
+        }
         guard applyUsernameFromInput() else { return }
         appState.wantsProductUpdateEmails = wantsUpdateEmails
         guard let clientID = FirebaseApp.app()?.options.clientID else {
@@ -282,12 +494,7 @@ struct LoginView: View {
                         if let error = appState.completeProviderLogin(username: username, provider: "google.com") {
                             presentAuthError(error)
                         } else {
-                            appState.configurePrimaryProfile(
-                                primaryMode: primaryProfileMode,
-                                socialVisible: socialVisible,
-                                corporateVisible: corporateVisible,
-                                createSecondary: createSecondaryProfile
-                            )
+                            applyPortalProfileDefaults()
                         }
                     }
                 }
@@ -296,6 +503,10 @@ struct LoginView: View {
     }
 
     func handleAppleLogin(auth: ASAuthorization) {
+        if authMode == .signUp && accountPortal == .business {
+            presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
+            return
+        }
         guard applyUsernameFromInput() else { return }
         appState.wantsProductUpdateEmails = wantsUpdateEmails
         guard let appleIDCredential = auth.credential as? ASAuthorizationAppleIDCredential else {
@@ -329,12 +540,7 @@ struct LoginView: View {
                     if let error = appState.completeProviderLogin(username: username, provider: "apple.com") {
                         presentAuthError(error)
                     } else {
-                        appState.configurePrimaryProfile(
-                            primaryMode: primaryProfileMode,
-                            socialVisible: socialVisible,
-                            corporateVisible: corporateVisible,
-                            createSecondary: createSecondaryProfile
-                        )
+                        applyPortalProfileDefaults()
                     }
                 }
             }
@@ -378,7 +584,33 @@ struct LoginView: View {
         let error: String?
         switch authMode {
         case .signUp:
-            error = appState.signUp(username: username, password: password)
+            if accountPortal == .business {
+                let registration = BusinessRegistration(
+                    ein: businessEIN,
+                    legalName: businessLegalName,
+                    dba: businessDBA,
+                    addressLine1: businessAddress,
+                    city: businessCity,
+                    state: businessState,
+                    zip: businessZIP,
+                    phone: businessPhone,
+                    website: businessWebsite
+                )
+                error = appState.signUp(
+                    username: username,
+                    password: password,
+                    personalDisplayName: nil,
+                    business: registration
+                )
+            } else {
+                let name = personalRealName.trimmingCharacters(in: .whitespacesAndNewlines)
+                error = appState.signUp(
+                    username: username,
+                    password: password,
+                    personalDisplayName: name.isEmpty ? nil : name,
+                    business: nil
+                )
+            }
         case .logIn:
             error = appState.logIn(username: username, password: password)
         }
@@ -395,12 +627,7 @@ struct LoginView: View {
             providerMessage = providerError
             showingProviderAlert = true
         } else {
-            appState.configurePrimaryProfile(
-                primaryMode: primaryProfileMode,
-                socialVisible: socialVisible,
-                corporateVisible: corporateVisible,
-                createSecondary: createSecondaryProfile
-            )
+            applyPortalProfileDefaults()
         }
     }
 

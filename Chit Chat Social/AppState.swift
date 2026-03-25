@@ -420,10 +420,6 @@ final class AppState: ObservableObject {
             enableAllSuperFeatures()
         }
         ensurePostMediaCoverage()
-        if localCredentials[currentUser.username.lowercased()] == nil {
-            localCredentials[currentUser.username.lowercased()] = "Yzesati01!"
-            saveCredentials()
-        }
         registerLoggedInAccount(currentUser.username)
     }
 
@@ -3501,7 +3497,72 @@ final class AppState: ObservableObject {
         UserDefaults.standard.removeObject(forKey: sessionStorageKey)
     }
 
-    func signUp(username: String, password: String) -> String? {
+    func validateBusinessRegistration(_ registration: BusinessRegistration) -> String? {
+        let einDigits = registration.ein.filter(\.isNumber)
+        guard einDigits.count == 9 else {
+            return "EIN must be exactly 9 digits (U.S. Employer Identification Number)."
+        }
+        let legal = registration.legalName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard legal.count >= 2 else { return "Legal business name is required." }
+        let line1 = registration.addressLine1.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard line1.count >= 4 else { return "Business street address is required." }
+        let city = registration.city.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard city.count >= 2 else { return "City is required." }
+        let st = registration.state.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard st.count == 2, st.allSatisfy(\.isLetter) else { return "Use a 2-letter state code (e.g. TX)." }
+        let zipRaw = registration.zip.trimmingCharacters(in: .whitespacesAndNewlines).filter(\.isNumber)
+        guard zipRaw.count == 5 || zipRaw.count == 9 else { return "ZIP must be 5 or 9 digits." }
+        let phoneDigits = registration.phone.filter(\.isNumber)
+        guard phoneDigits.count >= 10 else { return "Enter a valid business phone (10+ digits)." }
+        if !registration.website.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let w = registration.website.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !w.lowercased().hasPrefix("http") {
+                return "Website should start with https://"
+            }
+        }
+        return nil
+    }
+
+    private func applyBusinessRegistration(_ registration: BusinessRegistration) {
+        let einDigits = registration.ein.filter(\.isNumber)
+        let einStr = String(einDigits)
+        let formattedEIN = "\(einStr.prefix(2))-\(einStr.dropFirst(2))"
+        let legal = registration.legalName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dba = registration.dba.trimmingCharacters(in: .whitespacesAndNewlines)
+        currentUser.businessEIN = formattedEIN
+        currentUser.businessLegalName = legal
+        currentUser.businessDBA = dba
+        currentUser.businessAddressLine1 = registration.addressLine1.trimmingCharacters(in: .whitespacesAndNewlines)
+        currentUser.businessCity = registration.city.trimmingCharacters(in: .whitespacesAndNewlines)
+        currentUser.businessState = registration.state.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let z = registration.zip.trimmingCharacters(in: .whitespacesAndNewlines).filter(\.isNumber)
+        currentUser.businessZIP = z.count == 9 ? String(z.prefix(5)) + "-" + String(z.dropFirst(5)) : z
+        let p = registration.phone.filter(\.isNumber)
+        currentUser.businessPhone = p
+        currentUser.businessWebsite = registration.website.trimmingCharacters(in: .whitespacesAndNewlines)
+        currentUser.isBusinessAccount = true
+        currentUser.businessJobPostingApproved = false
+        currentUser.displayName = legal
+        currentUser.enterpriseAlias = dba.isEmpty ? legal : dba
+        currentUser.allowEnterpriseReveal = true
+    }
+
+    private func clearBusinessRegistrationOnCurrentUser() {
+        currentUser.businessEIN = ""
+        currentUser.businessLegalName = ""
+        currentUser.businessDBA = ""
+        currentUser.businessAddressLine1 = ""
+        currentUser.businessCity = ""
+        currentUser.businessState = ""
+        currentUser.businessZIP = ""
+        currentUser.businessPhone = ""
+        currentUser.businessWebsite = ""
+        currentUser.isBusinessAccount = false
+        currentUser.businessJobPostingApproved = false
+    }
+
+    /// Pass `business` when signing up as a registered business (EIN + entity details). Social handles stay on `username` / `handle`.
+    func signUp(username: String, password: String, personalDisplayName: String? = nil, business: BusinessRegistration? = nil) -> String? {
         guard let cleaned = normalizedUsername(from: username) else {
             return "Username must be 3+ characters and only letters, numbers, . or _"
         }
@@ -3518,11 +3579,27 @@ final class AppState: ObservableObject {
         if internalUsers.contains(where: { $0.username.lowercased() == key }) {
             return "Username already exists."
         }
+        if let registration = business {
+            if let err = validateBusinessRegistration(registration) { return err }
+        }
         localCredentials[key] = password
         saveCredentials()
         currentUser.username = cleaned
         currentUser.handle = "@\(cleaned)"
         currentUser.verificationStatus = cleaned.lowercased() == "almighty_bruce_" ? .verifiedInternal : .unverified
+        clearBusinessRegistrationOnCurrentUser()
+        if let registration = business {
+            applyBusinessRegistration(registration)
+        } else {
+            let rawName = personalDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if rawName.isEmpty {
+                currentUser.displayName = cleaned
+                currentUser.enterpriseAlias = cleaned
+            } else {
+                currentUser.displayName = rawName
+                currentUser.enterpriseAlias = rawName
+            }
+        }
         registerLoggedInAccount(cleaned)
         syncCurrentUserInDirectory()
         refreshCurrentProfileMedia()
