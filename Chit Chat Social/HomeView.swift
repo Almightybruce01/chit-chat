@@ -3092,7 +3092,7 @@ struct ReelsView: View {
         if let livePost = appState.posts.first(where: { $0.id == item.id }) {
             return max(0, livePost.likeCount)
         }
-        isReelLiked(item) ? item.likeCount + 1 : item.likeCount
+        return isReelLiked(item) ? item.likeCount + 1 : item.likeCount
     }
 
     private func effectiveCommentCount(for item: ReelDemoItem) -> Int {

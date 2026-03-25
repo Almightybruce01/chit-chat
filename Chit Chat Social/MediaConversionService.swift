@@ -123,7 +123,7 @@ enum MediaConversionService {
         return try copyFrameLegacy(generator, at: time)
     }
 
-    @available(iOS, introduced: 13.0, obsoleted: 18.0)
+    @available(iOS, introduced: 13.0)
     private static func exportVideoLegacy(_ export: AVAssetExportSession) async throws {
         try await withCheckedThrowingContinuation { continuation in
             export.exportAsynchronously {
@@ -137,7 +137,7 @@ enum MediaConversionService {
         }
     }
 
-    @available(iOS, introduced: 13.0, obsoleted: 18.0)
+    @available(iOS, introduced: 13.0)
     private static func copyFrameLegacy(_ generator: AVAssetImageGenerator, at time: CMTime) throws -> CGImage {
         try generator.copyCGImage(at: time, actualTime: nil)
     }
