@@ -1850,9 +1850,13 @@ final class AppState: ObservableObject {
         contracts.insert(deal, at: 0)
         if needsApproval {
             addActivity(type: .verification, detail: "Job post submitted for approval. Business accounts require verification to publish jobs.")
-            return (true, "Job post submitted for approval. You'll be notified when it's reviewed.")
         }
-        return (true, "Contract published.")
+        return (
+            true,
+            needsApproval
+                ? "Job post submitted for approval. You'll be notified when it's reviewed."
+                : "Contract published."
+        )
     }
 
     func approveJobPost(contractID: UUID) {
@@ -3803,11 +3807,15 @@ final class AppState: ObservableObject {
         if mode == .enterprise && !corporateProfileVisible {
             return "Private Corporate Profile"
         }
+        // Social surface should show usernames/handles, not real names.
+        if mode == .social {
+            return handle.replacingOccurrences(of: "@", with: "")
+        }
         if currentUser.handle.caseInsensitiveCompare(handle) == .orderedSame {
             if mode == .enterprise {
                 return currentUser.displayName
             }
-            return currentUser.handle.replacingOccurrences(of: "@", with: "")
+            return currentUser.displayName
         }
         if let found = internalUsers.first(where: { $0.handle.caseInsensitiveCompare(handle) == .orderedSame }) {
             return found.displayName

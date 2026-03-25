@@ -91,7 +91,7 @@ struct EnterpriseWorkspaceHomeView: View {
                 } else {
                     ForEach(Array(feed), id: \.id) { post in
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(post.authorHandle)
+                            Text(appState.displayName(for: post.authorHandle))
                                 .font(.caption.bold())
                                 .foregroundStyle(EnterprisePalette.action)
                             Text(post.caption)
@@ -150,7 +150,7 @@ struct EnterpriseTalentView: View {
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(user.enterpriseAlias)
                                                 .foregroundStyle(EnterprisePalette.textPrimary)
-                                            Text(user.handle)
+                                            Text(user.displayName)
                                                 .font(.caption)
                                                 .foregroundStyle(EnterprisePalette.textSecondary)
                                         }
@@ -295,7 +295,7 @@ struct EnterpriseInboxView: View {
                                 } else {
                                     ForEach(appState.dmRequests.prefix(6)) { request in
                                         VStack(alignment: .leading, spacing: 3) {
-                                            Text(request.fromHandle)
+                                            Text(appState.displayName(for: request.fromHandle))
                                                 .foregroundStyle(EnterprisePalette.textPrimary)
                                             Text(request.previewText)
                                                 .font(.caption)

@@ -46,6 +46,8 @@ ops/daily_company/out/LATEST_REPORT.md
 # Secrets (never commit)
 .env
 *.pem
+# Cloudflare Worker — local overrides for `wrangler dev` (copy from .dev.vars.example)
+ops/daily_company/dashboard-worker/.dev.vars
 # Firebase — download from Firebase Console → Project settings → Your apps
 Chit Chat Social/GoogleService-Info.plist
 

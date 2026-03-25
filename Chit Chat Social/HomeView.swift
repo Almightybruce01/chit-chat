@@ -2241,16 +2241,6 @@ struct ReelsView: View {
                                             .transition(.scale.combined(with: .opacity))
                                     }
                                 }
-                                .overlay {
-                                    HStack(spacing: 0) {
-                                        Color.clear
-                                            .contentShape(Rectangle())
-                                            .onTapGesture { goPreviousReel() }
-                                        Color.clear
-                                            .contentShape(Rectangle())
-                                            .onTapGesture { goNextReel() }
-                                    }
-                                }
                                 .contextMenu {
                                     Button {
                                         openInlineComments(for: item)
@@ -2307,7 +2297,7 @@ struct ReelsView: View {
                         }
                         .frame(width: proxy.size.width, height: proxy.size.height)
                         .contentShape(Rectangle())
-                        .highPriorityGesture(
+                        .simultaneousGesture(
                             TapGesture(count: 2).onEnded { triggerDoubleTapLike(item) }
                         )
                         .tag(index)
@@ -2833,7 +2823,7 @@ struct ReelsView: View {
             metricButton(icon: isReelLiked(item) ? "heart.fill" : "heart", value: formatMetric(effectiveLikeCount(for: item))) {
                 toggleLike(item)
             }
-            metricButton(icon: "bubble.right.fill", value: formatMetric(item.commentCount)) {
+            metricButton(icon: "bubble.right.fill", value: formatMetric(effectiveCommentCount(for: item))) {
                 openInlineComments(for: item)
             }
             metricButton(icon: "arrowshape.turn.up.right.fill", value: formatMetric(effectiveShareCount(for: item))) {
@@ -3052,21 +3042,6 @@ struct ReelsView: View {
         return Array(rotated.prefix(3))
     }
 
-    private func goNextReel() {
-        guard !reelItems.isEmpty else { return }
-        let last = max(0, reelItems.count - 1)
-        withAnimation(MotionTokens.spring) {
-            selectedIndex = min(selectedIndex + 1, last)
-        }
-    }
-
-    private func goPreviousReel() {
-        guard !reelItems.isEmpty else { return }
-        withAnimation(MotionTokens.spring) {
-            selectedIndex = max(0, selectedIndex - 1)
-        }
-    }
-
     private func openInlineComments(for item: ReelDemoItem) {
         HapticTokens.light()
         inlineCommentsTarget = item
@@ -3114,7 +3089,17 @@ struct ReelsView: View {
     }
 
     private func effectiveLikeCount(for item: ReelDemoItem) -> Int {
+        if let livePost = appState.posts.first(where: { $0.id == item.id }) {
+            return max(0, livePost.likeCount)
+        }
         isReelLiked(item) ? item.likeCount + 1 : item.likeCount
+    }
+
+    private func effectiveCommentCount(for item: ReelDemoItem) -> Int {
+        if appState.posts.contains(where: { $0.id == item.id }) {
+            return appState.comments(for: item.id).count
+        }
+        return item.commentCount
     }
 
     private func effectiveShareCount(for item: ReelDemoItem) -> Int {

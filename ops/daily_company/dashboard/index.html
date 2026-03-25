@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#070b14" />
+  <meta name="robots" content="noindex, nofollow, noarchive" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self' https:; font-src 'self' data:; upgrade-insecure-requests" />
   <title>Chit Chat Social — Elite Command Center</title>
   <style>
     :root {
@@ -369,8 +371,7 @@
     <div class="card elite-admin span2" style="max-width:720px;margin:0 auto">
       <h2 style="margin:0 0 12px;font-size:1.2rem">Elite Command Center — private app</h2>
       <p style="margin:0 0 14px;line-height:1.55;color:var(--muted)">
-        This GitHub Pages URL is a <strong>public landing page only</strong>. Report JSON and the real dashboard run on a
-        <strong>Cloudflare Worker</strong> so your password is checked on the server (never shipped in this HTML).
+        This GitHub Pages URL is a <strong>public landing page only</strong>. There are <strong>no ops PINs or Firebase secrets</strong> in this static HTML — only setup pointers. The live ops desk runs on a <strong>Cloudflare Worker</strong> with server-side secrets, <code>X-Ops-Pin</code> / session auth, and rate limiting.
       </p>
       <ul style="margin:0 0 16px;padding-left:18px;line-height:1.55">
         <li>Deploy: <code>ops/daily_company/dashboard-worker/</code> — see <strong>README.md</strong> there.</li>
@@ -385,7 +386,7 @@
   <div id="pin-gate" role="dialog" aria-modal="true" aria-labelledby="pin-title">
     <div class="pin-card">
       <h2 id="pin-title">Chit Chat Social</h2>
-      <p id="pin-gate-desc"><strong>Password required.</strong> Enter your dashboard password. Nothing below loads until you unlock.</p>
+      <p id="pin-gate-desc"><strong>Ops PIN required.</strong> Enter the PIN from your Worker secrets (<code>OPS_DASHBOARD_PIN</code> or <code>DASHBOARD_PASSWORD</code>). It is not stored in this page’s source; sent over HTTPS only. Nothing below loads until you unlock.</p>
       <input id="pin-input" type="password" maxlength="128" autocomplete="current-password" autocorrect="off" spellcheck="false" aria-label="Dashboard password" placeholder="Password" />
       <button type="button" id="pin-submit">Unlock dashboard</button>
       <p id="pin-error" class="err" style="margin-top:12px" hidden>Wrong password. Try again.</p>
@@ -582,7 +583,7 @@
 
   <footer class="shell">
     <strong>AI pipeline</strong> — <strong>local:</strong> loads <code>latest-report.json</code> + <code>history-export.json</code> from the same folder as this HTML.
-    <strong>Worker:</strong> loads via <code>/api/latest-report</code> from <strong>Workers KV</strong> only (server-gated). <strong>GitHub Pages:</strong> landing stub only.
+    <strong>Worker:</strong> ops APIs under <code>/api/ops/*</code> (KV reports + optional Firestore user pool). Send <code>X-Ops-Pin</code> or use session cookie after <code>POST /api/ops/login</code>. <strong>GitHub Pages:</strong> stub only (<code>noindex</code> + CSP meta).
     Local: <code>cd ops/daily_company/dashboard &amp;&amp; python3 -m http.server 8765</code> → <code>http://localhost:8765/</code>.
     <br /><br />
     Chit Chat Social · Elite Command Center · <button type="button" class="btn-logout" id="pin-logout-footer">Lock dashboard</button>
@@ -601,6 +602,16 @@
     const IS_FILE = location.protocol === 'file:';
     const USE_WORKER_AUTH = !IS_GH_PAGES && !IS_LOCAL && !IS_FILE && location.protocol === 'https:';
 
+    /** In-memory PIN for Worker: sent as X-Ops-Pin on ops API calls (never persisted). */
+    let opsPinCaptured = '';
+    function opsFetch(url, init) {
+      init = init || {};
+      init.credentials = 'include';
+      init.headers = init.headers ? Object.assign({}, init.headers) : {};
+      if (USE_WORKER_AUTH && opsPinCaptured) init.headers['X-Ops-Pin'] = opsPinCaptured;
+      return fetch(url, init);
+    }
+
     let userPoolCache = [];
 
     function setupUserPoolAdmin() {
@@ -615,10 +626,10 @@
         errEl.hidden = true;
         saveMsg.textContent = '';
         const q = (qInput.value || '').trim();
-        const url = '/api/admin/users?q=' + encodeURIComponent(q) + '&limit=200';
+        const url = '/api/ops/admin/users?q=' + encodeURIComponent(q) + '&limit=200';
         let r;
         try {
-          r = await fetch(url, { credentials: 'include' });
+          r = await opsFetch(url);
         } catch (e) {
           errEl.textContent = 'Network error loading user pool.';
           errEl.hidden = false;
@@ -629,6 +640,12 @@
         try { data = await r.json(); } catch (e) {}
         if (r.status === 401) {
           document.body.classList.add('pin-locked');
+          return;
+        }
+        if (r.status === 429) {
+          errEl.textContent = 'Too many attempts. Wait a few minutes and try again.';
+          errEl.hidden = false;
+          tbody.innerHTML = '';
           return;
         }
         if (!r.ok || !data.ok) {
@@ -688,9 +705,8 @@
         };
         let r;
         try {
-          r = await fetch('/api/admin/users/' + encodeURIComponent(uid), {
+          r = await opsFetch('/api/ops/admin/users/' + encodeURIComponent(uid), {
             method: 'PATCH',
-            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
           });
@@ -750,6 +766,7 @@
     });
 
     async function lockDashboard() {
+      opsPinCaptured = '';
       if (USE_WORKER_AUTH) {
         try { await fetch('/logout', { method: 'POST', credentials: 'include' }); } catch (e) {}
       }
@@ -773,12 +790,13 @@
 
     async function loadJson(name) {
       if (USE_WORKER_AUTH) {
-        const path = name === 'latest-report.json' ? '/api/latest-report' : '/api/history-export';
-        const r = await fetch(path, { credentials: 'include' });
+        const path = name === 'latest-report.json' ? '/api/ops/latest-report' : '/api/ops/history-export';
+        const r = await opsFetch(path);
         if (r.status === 401) {
           document.body.classList.add('pin-locked');
           throw new Error('Session expired — unlock again.');
         }
+        if (r.status === 429) throw new Error('Too many requests. Wait a few minutes and refresh.');
         if (!r.ok) throw new Error(name + ' ' + r.status);
         return r.json();
       }
@@ -941,26 +959,32 @@
       }
 
       async function tryWorkerLogin() {
-        const body = JSON.stringify({ password: (pinInput.value || '').trim() });
+        const pin = (pinInput.value || '').trim();
+        const body = JSON.stringify({ password: pin });
         try {
-          const r = await fetch('/login', {
+          const r = await opsFetch('/api/ops/login', {
             method: 'POST',
-            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body,
           });
           if (r.ok) {
+            opsPinCaptured = pin;
             document.body.classList.remove('pin-locked');
             mainDashboard();
             return;
           }
-        } catch (e) {}
+          if (r.status === 429) pinErr.textContent = 'Too many attempts. Wait a few minutes and try again.';
+          else if (r.status === 401) pinErr.textContent = 'Incorrect PIN or not authorized.';
+          else pinErr.textContent = 'Login failed (' + r.status + ').';
+        } catch (e) {
+          pinErr.textContent = 'Network error.';
+        }
         pinErr.hidden = false;
         pinInput.value = '';
         pinInput.focus();
       }
 
-      fetch('/api/session', { credentials: 'include' })
+      opsFetch('/api/ops/session')
         .then(r => (r.ok ? r.json() : Promise.reject()))
         .then(j => {
           if (j && j.ok) {

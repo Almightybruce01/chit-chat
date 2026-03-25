@@ -25,23 +25,14 @@ enum MediaConversionService {
             throw MediaConversionError.invalidVideoData
         }
 
-        let durationSeconds = CMTimeGetSeconds(asset.duration)
+        let assetDuration = try await asset.load(.duration)
+        let durationSeconds = CMTimeGetSeconds(assetDuration)
         let trimmed = max(0.8, min(5.0, durationSeconds.isFinite ? durationSeconds : 5.0))
         export.outputURL = outputURL
         export.outputFileType = .mp4
         export.shouldOptimizeForNetworkUse = true
         export.timeRange = CMTimeRange(start: .zero, duration: CMTime(seconds: trimmed, preferredTimescale: 600))
-
-        try await withCheckedThrowingContinuation { continuation in
-            export.exportAsynchronously {
-                switch export.status {
-                case .completed:
-                    continuation.resume(returning: ())
-                default:
-                    continuation.resume(throwing: export.error ?? MediaConversionError.exportFailed)
-                }
-            }
-        }
+        try await exportVideo(export, to: outputURL)
 
         guard let exported = try? Data(contentsOf: outputURL), !exported.isEmpty else {
             throw MediaConversionError.exportFailed
@@ -55,7 +46,8 @@ enum MediaConversionService {
         defer { try? FileManager.default.removeItem(at: inputURL) }
 
         let asset = AVURLAsset(url: inputURL)
-        let durationSeconds = CMTimeGetSeconds(asset.duration)
+        let assetDuration = try await asset.load(.duration)
+        let durationSeconds = CMTimeGetSeconds(assetDuration)
         let usableDuration = max(0.5, min(maxDuration, durationSeconds.isFinite ? durationSeconds : maxDuration))
         let totalFrames = max(8, Int(usableDuration * Double(max(4, fps))))
 
@@ -88,7 +80,7 @@ enum MediaConversionService {
         ]
 
         for time in times {
-            let cg = try generator.copyCGImage(at: time.timeValue, actualTime: nil)
+            let cg = try await generateFrame(generator, at: time.timeValue)
             CGImageDestinationAddImage(destination, cg, frameProps as CFDictionary)
         }
 
@@ -102,5 +94,51 @@ enum MediaConversionService {
         FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString)
             .appendingPathExtension(ext)
+    }
+
+    private static func exportVideo(_ export: AVAssetExportSession, to outputURL: URL) async throws {
+        if #available(iOS 18.0, *) {
+            do {
+                try await export.export(to: outputURL, as: .mp4)
+                return
+            } catch {
+                throw MediaConversionError.exportFailed
+            }
+        }
+        try await exportVideoLegacy(export)
+    }
+
+    private static func generateFrame(_ generator: AVAssetImageGenerator, at time: CMTime) async throws -> CGImage {
+        if #available(iOS 18.0, *) {
+            return try await withCheckedThrowingContinuation { continuation in
+                generator.generateCGImageAsynchronously(for: time) { cgImage, _, error in
+                    if let cgImage {
+                        continuation.resume(returning: cgImage)
+                    } else {
+                        continuation.resume(throwing: error ?? MediaConversionError.gifEncodingFailed)
+                    }
+                }
+            }
+        }
+        return try copyFrameLegacy(generator, at: time)
+    }
+
+    @available(iOS, introduced: 13.0, obsoleted: 18.0)
+    private static func exportVideoLegacy(_ export: AVAssetExportSession) async throws {
+        try await withCheckedThrowingContinuation { continuation in
+            export.exportAsynchronously {
+                switch export.status {
+                case .completed:
+                    continuation.resume(returning: ())
+                default:
+                    continuation.resume(throwing: export.error ?? MediaConversionError.exportFailed)
+                }
+            }
+        }
+    }
+
+    @available(iOS, introduced: 13.0, obsoleted: 18.0)
+    private static func copyFrameLegacy(_ generator: AVAssetImageGenerator, at time: CMTime) throws -> CGImage {
+        try generator.copyCGImage(at: time, actualTime: nil)
     }
 }

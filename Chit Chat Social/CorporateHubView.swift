@@ -41,7 +41,7 @@ struct CorporateHubView: View {
                         } else {
                             ForEach(Array(corporatePosts), id: \.id) { post in
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(post.authorHandle)
+                                    Text(appState.displayName(for: post.authorHandle))
                                         .font(.caption.bold())
                                         .foregroundStyle(BrandPalette.neonBlue)
                                     Text(post.caption)
