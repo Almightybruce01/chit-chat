@@ -4,7 +4,7 @@
 
 **GitHub Pages (public landing only):** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) — stub + instructions; report JSON is not published there.
 
-**Private UI:** deploy the Cloudflare Worker in [`ops/daily_company/dashboard-worker/`](ops/daily_company/dashboard-worker/) (password in Wrangler secrets — see that folder’s README). **Local:** `ops/daily_company/dashboard/` + `python3 -m http.server` after `./scripts/bootstrap-ai-company.sh`.
+**Private UI:** Cloudflare Worker + **Workers KV** only (no report JSON in this public repo). See [`docs/PRIVATE_DASHBOARD_SETUP.md`](docs/PRIVATE_DASHBOARD_SETUP.md) and [`ops/daily_company/dashboard-worker/`](ops/daily_company/dashboard-worker/). **Local:** `ops/daily_company/dashboard/` + `python3 -m http.server` after `./scripts/bootstrap-ai-company.sh`.
 
 Repo folder for Pages: [`docs/ai-company/`](docs/ai-company/). Enable **Settings → Pages → `/docs` on `main`** if you see a 404. Canonical reference: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
 

@@ -33,9 +33,15 @@ __pycache__/
 # Optional local product signals for AI dashboard (copy from user_signals.json.example)
 ops/daily_company/data/user_signals.json
 
-# Do not publish pipeline JSON on public GitHub Pages (use Worker + secrets or local serve)
+# Do not publish pipeline JSON on public GitHub Pages (use Worker + KV or local serve)
 docs/ai-company/latest-report.json
 docs/ai-company/history-export.json
+docs/ai-company/LATEST_REPORT.md
+
+# Generated reports stay local / KV only — not in public git
+ops/daily_company/out/latest-report.json
+ops/daily_company/out/history-export.json
+ops/daily_company/out/LATEST_REPORT.md
 
 # Secrets (never commit)
 .env

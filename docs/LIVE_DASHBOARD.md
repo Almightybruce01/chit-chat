@@ -6,24 +6,25 @@ This file lives in **`Almightybruce01/chit-chat`** only — the Chit Chat Social
 
 **URL:** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/)
 
-- Shows a **stub** that explains the real dashboard is private. **No** `latest-report.json` / `history-export.json` are published under `docs/ai-company/` (those files are gitignored).
+- **Stub only** — no report JSON, no `LATEST_REPORT.md` on Pages.
 - **Repo path:** `docs/ai-company/index.html`
-- **Source of truth in git:** `ops/daily_company/dashboard/index.html` — run `./scripts/bootstrap-ai-company.sh` to copy HTML (+ `LATEST_REPORT.md`) into `docs/ai-company/` before pushing.
+- **Source of truth in git:** `ops/daily_company/dashboard/index.html` — run `./scripts/bootstrap-ai-company.sh` to copy HTML into `docs/ai-company/` before pushing.
 
-## Private Elite Command Center (recommended)
+## Private Elite Command Center (Cloudflare Worker + KV)
 
-**Why:** A password checked only in the browser is visible in page source. The **Cloudflare Worker** checks your password on the server and sets an **HttpOnly** cookie; report JSON is fetched only after login.
+**Data:** Report JSON exists **only in Workers KV** (keys `latest-report`, `history-export`). It is **not** committed to this public repo and the Worker does **not** read public `raw.githubusercontent.com` URLs.
 
-**Deploy:** See **[`ops/daily_company/dashboard-worker/README.md`](../ops/daily_company/dashboard-worker/README.md)** (from repo root).
+**Full setup:** **[`docs/PRIVATE_DASHBOARD_SETUP.md`](PRIVATE_DASHBOARD_SETUP.md)**
 
-Summary:
+**Short path:**
 
-1. `cd ops/daily_company/dashboard-worker && npm install`
-2. `npx wrangler login` then `npx wrangler secret put DASHBOARD_PASSWORD` and `npx wrangler secret put SESSION_SECRET`
-3. `npm run deploy`
-4. Open the `*.workers.dev` URL shown after deploy, enter your password, use **Lock** to log out.
+1. Create KV namespace, put id in `ops/daily_company/dashboard-worker/wrangler.toml`, commit.
+2. `npx wrangler secret put DASHBOARD_PASSWORD` and `SESSION_SECRET` in `dashboard-worker/`.
+3. GitHub repo secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `DASHBOARD_KV_NAMESPACE_ID`.
+4. Actions → **Deploy dashboard Worker** (workflow_dispatch).
+5. Actions → **Daily AI Company Report** (uploads JSON to KV).
 
-**Default data source:** the Worker pulls JSON from raw `main` on GitHub (`ops/daily_company/out/…`) **after** authentication. If those files stay in a **public** repo, someone could still hit the raw URLs directly — for stronger secrecy, use **Workers KV** or private URLs (Worker README).
+**Technical README:** [`ops/daily_company/dashboard-worker/README.md`](../ops/daily_company/dashboard-worker/README.md)
 
 ## Local dashboard (your Mac)
 

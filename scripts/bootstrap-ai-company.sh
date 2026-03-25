@@ -16,8 +16,7 @@ python3 -m daily_company --root "$ROOT" --out "$ROOT/ops/daily_company/out" \
   --dashboard-export "$ROOT/ops/daily_company/out/history-export.json"
 
 mkdir -p docs/ai-company
-cp -f ops/daily_company/out/LATEST_REPORT.md docs/ai-company/
-# Report JSON is not copied to docs/ai-company/ — GitHub Pages is public; use Cloudflare Worker + secrets (see ops/daily_company/dashboard-worker/README.md).
+# Do not copy report JSON or LATEST_REPORT.md to docs — public Pages stays minimal; reports go to Cloudflare KV (see docs/PRIVATE_DASHBOARD_SETUP.md).
 cp -f ops/daily_company/dashboard/index.html docs/ai-company/
 cp -f "ops/daily_company/dashboard/Chit Chat Social Dashboard.webloc" docs/
 

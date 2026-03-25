@@ -1,18 +1,11 @@
 import dashboardHtml from "../static/index.html";
 
 const COOKIE = "ccs_sess";
-const DEFAULT_REPORT =
-  "https://raw.githubusercontent.com/Almightybruce01/chit-chat/main/ops/daily_company/out/latest-report.json";
-const DEFAULT_HISTORY =
-  "https://raw.githubusercontent.com/Almightybruce01/chit-chat/main/ops/daily_company/out/history-export.json";
-
 const te = new TextEncoder();
 
 export interface Env {
   DASHBOARD_PASSWORD: string;
   SESSION_SECRET: string;
-  REPORT_JSON_URL?: string;
-  HISTORY_JSON_URL?: string;
   REPORT_KV?: KVNamespace;
 }
 
@@ -133,26 +126,31 @@ async function proxyJson(request: Request, env: Env, kind: "report" | "history")
   const deny = await requireSession(request, env);
   if (deny) return deny;
 
-  if (env.REPORT_KV) {
-    const key = kind === "report" ? "latest-report" : "history-export";
-    const body = await env.REPORT_KV.get(key);
-    if (body)
-      return new Response(body, {
-        headers: { "content-type": "application/json; charset=utf-8", "cache-control": "private, no-store" },
-      });
+  if (!env.REPORT_KV) {
+    return json({ ok: false, error: "kv_not_bound" }, 503);
   }
 
-  const url =
-    kind === "report"
-      ? env.REPORT_JSON_URL || DEFAULT_REPORT
-      : env.HISTORY_JSON_URL || DEFAULT_HISTORY;
-  const r = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!r.ok) return json({ ok: false, error: "upstream", status: r.status }, 502);
-  const text = await r.text();
-  return new Response(text, {
-    headers: { "content-type": "application/json; charset=utf-8", "cache-control": "private, no-store" },
+  const key = kind === "report" ? "latest-report" : "history-export";
+  const body = await env.REPORT_KV.get(key);
+  if (!body) {
+    return json({ ok: false, error: "report_not_in_kv_run_ci_or_upload" }, 503);
+  }
+  return new Response(body, {
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "private, no-store",
+    },
   });
 }
+
+const htmlSecurityHeaders: Record<string, string> = {
+  "content-type": "text/html; charset=utf-8",
+  "cache-control": "no-store",
+  "x-content-type-options": "nosniff",
+  "x-frame-options": "DENY",
+  "referrer-policy": "no-referrer",
+  "permissions-policy": "camera=(), microphone=(), geolocation=()",
+};
 
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
@@ -207,13 +205,10 @@ export default {
 
     if (path === "/" && request.method === "GET") {
       return new Response(dashboardHtml as string, {
-        headers: {
-          "content-type": "text/html; charset=utf-8",
-          "cache-control": "no-store",
-        },
+        headers: htmlSecurityHeaders,
       });
     }
 
-    return new Response("Not found", { status: 404 });
+    return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } });
   },
 };

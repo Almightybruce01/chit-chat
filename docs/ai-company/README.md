@@ -7,11 +7,10 @@ This folder is what GitHub Pages serves at:
 | File | Role |
 |------|------|
 | `index.html` | Landing stub + same UI for **local** / **Cloudflare Worker** (no password in source) |
-| `LATEST_REPORT.md` | Human-readable report (optional publish) |
 
-**Report JSON** (`latest-report.json`, `history-export.json`) is **not** published here — those paths are gitignored so a public Pages site cannot ship pipeline data. Use:
+**Report JSON** is **not** in git or on Pages. Private dashboard reads **Workers KV** after login. Use:
 
-- **Private dashboard:** `ops/daily_company/dashboard-worker/` (see **README.md** there) — password lives in **Wrangler secrets**.
+- **Private dashboard:** `ops/daily_company/dashboard-worker/` + **`docs/PRIVATE_DASHBOARD_SETUP.md`** — password in **Wrangler secrets**, data in **KV**.
 - **Local:** `ops/daily_company/dashboard/` + `python3 -m http.server` after bootstrap copies JSON into that folder.
 
 **Update flow:** edit `ops/daily_company/dashboard/index.html`, run:

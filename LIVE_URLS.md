@@ -9,7 +9,7 @@ Everything in this repository is **Chit Chat Social** only — app, `docs/`, wor
 ## Elite Command Center (web dashboard)
 
 - **GitHub Pages (public landing only):** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) — stub + instructions; **no** report JSON is published there. See **[`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md)**.
-- **Private dashboard (bookmark this after you deploy):** Cloudflare Worker in **`ops/daily_company/dashboard-worker/`** — password is stored in **Wrangler secrets**, not in HTML. Full steps in that folder’s **README.md**.
+- **Private dashboard (bookmark after deploy):** Cloudflare Worker in **`ops/daily_company/dashboard-worker/`** — password in **Wrangler secrets**; report JSON in **Workers KV** only (not in git). Setup: **`docs/PRIVATE_DASHBOARD_SETUP.md`**.
 - **Safari bookmark:** `docs/Chit Chat Social Dashboard.webloc` — points at Pages; for the private UI, bookmark your Worker URL in the browser after deploy.
 - **Local full dashboard:** `cd ops/daily_company/dashboard && python3 -m http.server 8765` (after `./scripts/bootstrap-ai-company.sh`).
 - **Source HTML:** `ops/daily_company/dashboard/index.html` · **Deep links:** `#admin` · `#cursor` · `#pipeline`

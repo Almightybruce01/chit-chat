@@ -532,7 +532,7 @@
 
   <footer class="shell">
     <strong>AI pipeline</strong> — <strong>local:</strong> loads <code>latest-report.json</code> + <code>history-export.json</code> from the same folder as this HTML.
-    <strong>Worker:</strong> loads via <code>/api/latest-report</code> (server-gated). <strong>GitHub Pages:</strong> landing stub only — no JSON on Pages.
+    <strong>Worker:</strong> loads via <code>/api/latest-report</code> from <strong>Workers KV</strong> only (server-gated). <strong>GitHub Pages:</strong> landing stub only.
     Local: <code>cd ops/daily_company/dashboard &amp;&amp; python3 -m http.server 8765</code> → <code>http://localhost:8765/</code>.
     <br /><br />
     Chit Chat Social · Elite Command Center · <button type="button" class="btn-logout" id="pin-logout-footer">Lock dashboard</button>
@@ -733,9 +733,9 @@
           'Pipeline · JSON not found — run bootstrap from repo (see footer). Admin section above still works.';
         main.innerHTML = `
           <div class="card span2 err">
-            Missing report JSON. Local: run <code>./scripts/bootstrap-ai-company.sh</code>, then
+            Missing report JSON. <strong>Local:</strong> run <code>./scripts/bootstrap-ai-company.sh</code>, then
             <code>cd ops/daily_company/dashboard &amp;&amp; python3 -m http.server 8765</code>.
-            Worker: ensure <code>ops/daily_company/out/*.json</code> exists on <code>main</code>, KV, or set <code>REPORT_JSON_URL</code> (see <code>ops/daily_company/dashboard-worker/README.md</code>).
+            <strong>Worker:</strong> keys <code>latest-report</code> / <code>history-export</code> must exist in Workers KV (run Daily AI Company Report in GitHub Actions or upload with <code>wrangler kv key put</code>). See <code>docs/PRIVATE_DASHBOARD_SETUP.md</code>.
           </div>
         `;
         return;
