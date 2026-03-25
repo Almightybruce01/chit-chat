@@ -1,0 +1,17 @@
+# Chit Chat Social — private Elite Command Center (server-side password, no secret in HTML).
+# 1) npm install  2) wrangler login  3) wrangler secret put DASHBOARD_PASSWORD  4) wrangler secret put SESSION_SECRET  5) npm run deploy
+# Optional: set REPORT_JSON_URL / HISTORY_JSON_URL to private URLs or use KV (see README).
+
+name = "chit-chat-dashboard"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# Uncomment and create a KV namespace to store report JSON privately (no public raw GitHub URL).
+# [[kv_namespaces]]
+# binding = "REPORT_KV"
+# id = "<your_kv_id>"
+
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true

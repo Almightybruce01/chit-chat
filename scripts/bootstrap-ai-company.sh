@@ -16,9 +16,8 @@ python3 -m daily_company --root "$ROOT" --out "$ROOT/ops/daily_company/out" \
   --dashboard-export "$ROOT/ops/daily_company/out/history-export.json"
 
 mkdir -p docs/ai-company
-cp -f ops/daily_company/out/latest-report.json docs/ai-company/
 cp -f ops/daily_company/out/LATEST_REPORT.md docs/ai-company/
-cp -f ops/daily_company/out/history-export.json docs/ai-company/
+# Report JSON is not copied to docs/ai-company/ — GitHub Pages is public; use Cloudflare Worker + secrets (see ops/daily_company/dashboard-worker/README.md).
 cp -f ops/daily_company/dashboard/index.html docs/ai-company/
 cp -f "ops/daily_company/dashboard/Chit Chat Social Dashboard.webloc" docs/
 
@@ -27,9 +26,8 @@ cp -f ops/daily_company/out/latest-report.json ops/daily_company/dashboard/
 cp -f ops/daily_company/out/history-export.json ops/daily_company/dashboard/
 
 echo ""
-echo "📎 Live dashboard (GitHub Pages, repo folder docs/ai-company/):"
-echo "   https://almightybruce01.github.io/chit-chat/ai-company/"
-echo "   See docs/LIVE_DASHBOARD.md"
+echo "📎 GitHub Pages landing (stub only, no report JSON): https://almightybruce01.github.io/chit-chat/ai-company/"
+echo "   Private dashboard: deploy ops/daily_company/dashboard-worker/ — see docs/LIVE_DASHBOARD.md"
 echo ""
 echo "✅ Done. Next steps (once):"
 echo "  1. Create a repo on github.com (empty, no README)."
@@ -37,6 +35,6 @@ echo "  2:  git remote add origin https://github.com/YOU/REPO.git   (create empt
 echo "  3:  git add -A && git commit -m 'Add AI Company pipeline' && git push -u origin main"
 echo "  4:  Settings → Pages → Branch main, folder /docs"
 echo "  5:  Optional repo secrets: OPENAI_API_KEY, GITHUB_TOKEN (usually automatic in Actions)"
-echo "  6:  Site: https://YOU.github.io/REPO/ai-company/  (PIN 5505 on first load)"
+echo "  6:  Private dashboard: Cloudflare Worker in ops/daily_company/dashboard-worker/ (password in Wrangler secrets)"
 echo "  7:  Bookmark: docs/Chit Chat Social Dashboard.webloc → open or drag to Desktop"
 echo ""

@@ -1,0 +1,12 @@
+{
+  "name": "chit-chat-dashboard-worker",
+  "private": true,
+  "scripts": {
+    "prep": "cp ../dashboard/index.html static/index.html",
+    "deploy": "npm run prep && wrangler deploy",
+    "dev": "npm run prep && wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3.99.0"
+  }
+}

@@ -1,10 +1,12 @@
 # Chit Chat Social - Elite Social Platform (MVP Foundation)
 
-## Live dashboard (GitHub Pages)
+## Live dashboard
 
-**Direct link:** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/)
+**GitHub Pages (public landing only):** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) — stub + instructions; report JSON is not published there.
 
-Unlock with PIN **5505** after the page loads. Repo folder: [`docs/ai-company/`](docs/ai-company/). Enable **Settings → Pages → `/docs` on `main`** if you see a 404. Canonical reference: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
+**Private UI:** deploy the Cloudflare Worker in [`ops/daily_company/dashboard-worker/`](ops/daily_company/dashboard-worker/) (password in Wrangler secrets — see that folder’s README). **Local:** `ops/daily_company/dashboard/` + `python3 -m http.server` after `./scripts/bootstrap-ai-company.sh`.
+
+Repo folder for Pages: [`docs/ai-company/`](docs/ai-company/). Enable **Settings → Pages → `/docs` on `main`** if you see a 404. Canonical reference: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
 
 ---
 

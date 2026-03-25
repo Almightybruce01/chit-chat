@@ -8,15 +8,12 @@ Everything in this repository is **Chit Chat Social** only — app, `docs/`, wor
 
 ## Elite Command Center (web dashboard)
 
-- **Canonical live URL (bookmark this):** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) — matches **`docs/ai-company/`** in this repo on **`main`**.  
-  Also documented in **[`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md)**.
-- **4-digit PIN** `5505` unlocks (session in browser until **Lock** or tab close).  
-  **Note:** On a public repo the PIN is visible in page source—it keeps casual visitors out, not determined attackers. For real access control use a private repo, Cloudflare Access, or VPN.
-- **Safari bookmark file (double-click on Mac):** `docs/Chit Chat Social Dashboard.webloc` — drag to your Desktop or Dock for one-click access to the public URL above.
-- **On your Mac (local file):** `/Users/brianbruce/Desktop/Chit Chat Social/ops/daily_company/dashboard/index.html`
-- **File in repo (browse):** `https://github.com/Almightybruce01/chit-chat/blob/main/ops/daily_company/dashboard/index.html`
-- **Deep links:** `#admin` · `#cursor` · `#pipeline`
-- **Regenerate JSON + publish to `docs/ai-company/`:** `./scripts/bootstrap-ai-company.sh` then commit + push so Pages updates.
+- **GitHub Pages (public landing only):** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) — stub + instructions; **no** report JSON is published there. See **[`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md)**.
+- **Private dashboard (bookmark this after you deploy):** Cloudflare Worker in **`ops/daily_company/dashboard-worker/`** — password is stored in **Wrangler secrets**, not in HTML. Full steps in that folder’s **README.md**.
+- **Safari bookmark:** `docs/Chit Chat Social Dashboard.webloc` — points at Pages; for the private UI, bookmark your Worker URL in the browser after deploy.
+- **Local full dashboard:** `cd ops/daily_company/dashboard && python3 -m http.server 8765` (after `./scripts/bootstrap-ai-company.sh`).
+- **Source HTML:** `ops/daily_company/dashboard/index.html` · **Deep links:** `#admin` · `#cursor` · `#pipeline`
+- **Regenerate JSON + refresh Pages HTML:** `./scripts/bootstrap-ai-company.sh` then commit + push (JSON stays under `ops/daily_company/out/` and local `dashboard/`; not copied to `docs/ai-company/`).
 - **Optional feedback for AI:** `ops/daily_company/data/user_signals.json` (see `.example` file).
 
 **Enable Pages (once):** GitHub repo → **Settings → Pages → Build and deployment** → Branch **main** → folder **`/docs`** → **Save**.

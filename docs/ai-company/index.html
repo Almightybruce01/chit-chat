@@ -286,7 +286,7 @@
     }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
-    /* PIN gate — casual privacy on public Pages; code is visible in repo source */
+    /* Password gate — Worker: server login; GitHub Pages: hidden (stub only); local: gate not shown */
     body.pin-locked #dashboard-root { display: none !important; }
     body:not(.pin-locked) #pin-gate { display: none !important; }
     .pin-gate {
@@ -345,15 +345,48 @@
       cursor: pointer;
     }
     .btn-logout:hover { background: rgba(252,129,129,0.22); }
+
+    #pages-stub {
+      display: none;
+      max-width: 720px;
+      margin: 48px auto;
+      padding: 0 20px 48px;
+    }
+    body.github-pages #pages-stub { display: block !important; }
+    body.github-pages #pin-gate,
+    body.github-pages #dashboard-root {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+      overflow: hidden !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
   </style>
 </head>
 <body class="pin-locked">
-  <!-- Public dashboard password (client-side only): 5505 — required before any data loads -->
+  <div id="pages-stub" class="shell">
+    <div class="card elite-admin span2" style="max-width:720px;margin:0 auto">
+      <h2 style="margin:0 0 12px;font-size:1.2rem">Elite Command Center — private app</h2>
+      <p style="margin:0 0 14px;line-height:1.55;color:var(--muted)">
+        This GitHub Pages URL is a <strong>public landing page only</strong>. Report JSON and the real dashboard run on a
+        <strong>Cloudflare Worker</strong> so your password is checked on the server (never shipped in this HTML).
+      </p>
+      <ul style="margin:0 0 16px;padding-left:18px;line-height:1.55">
+        <li>Deploy: <code>ops/daily_company/dashboard-worker/</code> — see <strong>README.md</strong> there.</li>
+        <li>Local dev: <code>cd ops/daily_company/dashboard &amp;&amp; python3 -m http.server 8765</code></li>
+      </ul>
+      <p style="margin:0;font-size:0.85rem;color:var(--muted)">
+        Repo: <a href="https://github.com/Almightybruce01/chit-chat" target="_blank" rel="noopener" style="color:var(--cyan)">Almightybruce01/chit-chat</a>
+      </p>
+    </div>
+  </div>
+
   <div id="pin-gate" role="dialog" aria-modal="true" aria-labelledby="pin-title">
     <div class="pin-card">
       <h2 id="pin-title">Chit Chat Social</h2>
-      <p><strong>Password required.</strong> Enter the 4-digit dashboard password to continue. Nothing below loads until you unlock.</p>
-      <input id="pin-input" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]*" autocomplete="off" autocorrect="off" spellcheck="false" aria-label="Dashboard password" placeholder="••••" />
+      <p id="pin-gate-desc"><strong>Password required.</strong> Enter your dashboard password. Nothing below loads until you unlock.</p>
+      <input id="pin-input" type="password" maxlength="128" autocomplete="current-password" autocorrect="off" spellcheck="false" aria-label="Dashboard password" placeholder="Password" />
       <button type="button" id="pin-submit">Unlock dashboard</button>
       <p id="pin-error" class="err" style="margin-top:12px" hidden>Wrong password. Try again.</p>
     </div>
@@ -382,7 +415,7 @@
         <button type="button" id="copyDash">Copy dashboard link</button>
         <button type="button" id="copyAdmin">Copy #admin link</button>
         <button type="button" id="copyCursor">Copy #cursor link</button>
-        <button type="button" id="copyPublic" title="GitHub Pages URL">Copy public URL</button>
+        <button type="button" id="copyPublic" title="Copy this page URL">Copy page URL</button>
         <button type="button" class="btn-logout" id="pin-logout">Lock</button>
         <span class="hint">Deep links: <code>#admin</code> · <code>#cursor</code> · <code>#pipeline</code></span>
       </div>
@@ -435,7 +468,7 @@
           <a href="https://github.com/Almightybruce01/chit-chat" target="_blank" rel="noopener">Repository<span>Source of truth</span></a>
           <a href="https://github.com/Almightybruce01/chit-chat/actions" target="_blank" rel="noopener">GitHub Actions<span>Daily company pipeline</span></a>
           <a href="https://almightybruce01.github.io/chit-chat/" target="_blank" rel="noopener">GitHub Pages (site root)<span>Redirects to dashboard</span></a>
-          <a href="https://almightybruce01.github.io/chit-chat/ai-company/" target="_blank" rel="noopener">Public dashboard<span>Bookmark this — PIN required after load</span></a>
+          <a href="https://almightybruce01.github.io/chit-chat/ai-company/" target="_blank" rel="noopener">GitHub Pages landing<span>Public stub — use Worker for live dashboard</span></a>
         </div>
         <p style="margin:14px 0 0;font-size:0.82rem;color:var(--muted);">
           <strong>Direct link to this dashboard file in the repo:</strong><br />
@@ -450,11 +483,13 @@
     <section id="cursor" class="anchor" style="margin-top:22px;">
       <div class="card span2 elite-admin">
         <h2>Where this lives on your Mac · Cursor workflow</h2>
-        <h3>Public dashboard (bookmark this)</h3>
+        <h3>Live dashboard (private)</h3>
         <p style="margin:0 0 12px;font-size:0.92rem">
-          After GitHub Pages is on (<code>/docs</code> from <code>main</code>), your live URL is:<br />
-          <a href="https://almightybruce01.github.io/chit-chat/ai-company/" target="_blank" rel="noopener" style="color:var(--cyan);font-weight:600">https://almightybruce01.github.io/chit-chat/ai-company/</a><br />
-          Use the nav button <strong>Copy public URL</strong> or the repo file <code>docs/Chit Chat Social Dashboard.webloc</code> (double-click on Mac, then drag shortcut to Desktop). Enter PIN <strong>5505</strong> to unlock; tap <strong>Lock</strong> when done.
+          <strong>GitHub Pages</strong> (<code>/docs</code> on <code>main</code>) only shows a <strong>landing stub</strong> at
+          <a href="https://almightybruce01.github.io/chit-chat/ai-company/" target="_blank" rel="noopener" style="color:var(--cyan);font-weight:600">…/ai-company/</a> — no report JSON is published there.
+          For the full Command Center with server-checked password, deploy the <strong>Cloudflare Worker</strong> in
+          <code>ops/daily_company/dashboard-worker/</code> (see its README) and bookmark your <code>*.workers.dev</code> (or custom) URL.
+          Use <strong>Copy page URL</strong> in the nav when you are on that Worker. Tap <strong>Lock</strong> to clear the session cookie.
         </p>
         <h3>Paths (Finder or Cursor → File → Open)</h3>
         <ul>
@@ -485,7 +520,7 @@
           <li>Optionally paste <strong>TestFlight / review quotes</strong> (no PII) into <code>user_signals.json</code> so the next run ties product ideas to real feedback.</li>
         </ol>
         <p style="margin:14px 0 0;font-size:0.82rem;color:var(--muted);">
-          Online copy (if GitHub Pages is enabled): reports are published under <code>docs/ai-company/</code>; same relative JSON loading applies.
+          Online: report JSON is <strong>not</strong> shipped on GitHub Pages. Use the Worker or local <code>http.server</code> beside <code>ops/daily_company/dashboard/</code>.
         </p>
       </div>
     </section>
@@ -496,9 +531,9 @@
   </section>
 
   <footer class="shell">
-    <strong>AI pipeline</strong> — this page loads <code>latest-report.json</code> and <code>history-export.json</code> from the <em>same folder</em> as this HTML file.
-    From repo root: <code>cd ops/daily_company/dashboard &amp;&amp; python3 -m http.server 8765</code> then open
-    <code>http://localhost:8765/</code> (the pipeline section will populate). GitHub’s file viewer does not run those fetches.
+    <strong>AI pipeline</strong> — <strong>local:</strong> loads <code>latest-report.json</code> + <code>history-export.json</code> from the same folder as this HTML.
+    <strong>Worker:</strong> loads via <code>/api/latest-report</code> (server-gated). <strong>GitHub Pages:</strong> landing stub only — no JSON on Pages.
+    Local: <code>cd ops/daily_company/dashboard &amp;&amp; python3 -m http.server 8765</code> → <code>http://localhost:8765/</code>.
     <br /><br />
     Chit Chat Social · Elite Command Center · <button type="button" class="btn-logout" id="pin-logout-footer">Lock dashboard</button>
   </footer>
@@ -509,9 +544,12 @@
 
   <script>
     const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    const PIN_STORAGE = 'ccs_cmd_unlock_v1';
-    const PIN_EXPECTED = '5505';
-    const PUBLIC_DASH_URL = 'https://almightybruce01.github.io/chit-chat/ai-company/';
+    const GH_PAGES_LANDING = 'https://almightybruce01.github.io/chit-chat/ai-company/';
+    const h = location.hostname;
+    const IS_GH_PAGES = /\.github\.io$/i.test(h);
+    const IS_LOCAL = h === 'localhost' || h === '127.0.0.1' || h === '[::1]';
+    const IS_FILE = location.protocol === 'file:';
+    const USE_WORKER_AUTH = !IS_GH_PAGES && !IS_LOCAL && !IS_FILE && location.protocol === 'https:';
 
     function mainDashboard() {
     function showToast(msg) {
@@ -547,11 +585,13 @@
       copyText(base + '#cursor');
     });
     document.getElementById('copyPublic').addEventListener('click', () => {
-      copyText(PUBLIC_DASH_URL);
+      copyText(USE_WORKER_AUTH ? window.location.href.split('#')[0] : GH_PAGES_LANDING);
     });
 
-    function lockDashboard() {
-      sessionStorage.removeItem(PIN_STORAGE);
+    async function lockDashboard() {
+      if (USE_WORKER_AUTH) {
+        try { await fetch('/logout', { method: 'POST', credentials: 'include' }); } catch (e) {}
+      }
       window.location.reload();
     }
     document.getElementById('pin-logout').addEventListener('click', lockDashboard);
@@ -565,6 +605,16 @@
     }
 
     async function loadJson(name) {
+      if (USE_WORKER_AUTH) {
+        const path = name === 'latest-report.json' ? '/api/latest-report' : '/api/history-export';
+        const r = await fetch(path, { credentials: 'include' });
+        if (r.status === 401) {
+          document.body.classList.add('pin-locked');
+          throw new Error('Session expired — unlock again.');
+        }
+        if (!r.ok) throw new Error(name + ' ' + r.status);
+        return r.json();
+      }
       const r = await fetch('./' + name);
       if (!r.ok) throw new Error(name + ' ' + r.status);
       return r.json();
@@ -683,8 +733,9 @@
           'Pipeline · JSON not found — run bootstrap from repo (see footer). Admin section above still works.';
         main.innerHTML = `
           <div class="card span2 err">
-            Missing <code>latest-report.json</code> in this folder. From repo: <code>./scripts/bootstrap-ai-company.sh</code>
-            or copy from <code>ops/daily_company/out/</code>. Serve this directory over HTTP to load reports.
+            Missing report JSON. Local: run <code>./scripts/bootstrap-ai-company.sh</code>, then
+            <code>cd ops/daily_company/dashboard &amp;&amp; python3 -m http.server 8765</code>.
+            Worker: ensure <code>ops/daily_company/out/*.json</code> exists on <code>main</code>, KV, or set <code>REPORT_JSON_URL</code> (see <code>ops/daily_company/dashboard-worker/README.md</code>).
           </div>
         `;
         return;
@@ -698,32 +749,65 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-      if (sessionStorage.getItem(PIN_STORAGE) === '1') {
+      if (IS_GH_PAGES) {
+        document.body.classList.add('github-pages');
         document.body.classList.remove('pin-locked');
-        mainDashboard();
         return;
       }
       const pinInput = document.getElementById('pin-input');
       const pinErr = document.getElementById('pin-error');
-      function tryUnlock() {
-        if ((pinInput.value || '').trim() === PIN_EXPECTED) {
-          sessionStorage.setItem(PIN_STORAGE, '1');
-          document.body.classList.remove('pin-locked');
-          mainDashboard();
-        } else {
-          pinErr.hidden = false;
-          pinInput.value = '';
-          pinInput.focus();
-        }
+
+      if (!USE_WORKER_AUTH) {
+        document.body.classList.remove('pin-locked');
+        mainDashboard();
+        return;
       }
-      document.getElementById('pin-submit').addEventListener('click', tryUnlock);
-      pinInput.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') tryUnlock();
-      });
-      pinInput.addEventListener('input', function () {
-        pinErr.hidden = true;
-      });
-      pinInput.focus();
+
+      function wireGateHandlers(tryUnlockFn) {
+        document.getElementById('pin-submit').addEventListener('click', tryUnlockFn);
+        pinInput.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') tryUnlockFn();
+        });
+        pinInput.addEventListener('input', function () {
+          pinErr.hidden = true;
+        });
+      }
+
+      async function tryWorkerLogin() {
+        const body = JSON.stringify({ password: (pinInput.value || '').trim() });
+        try {
+          const r = await fetch('/login', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+          });
+          if (r.ok) {
+            document.body.classList.remove('pin-locked');
+            mainDashboard();
+            return;
+          }
+        } catch (e) {}
+        pinErr.hidden = false;
+        pinInput.value = '';
+        pinInput.focus();
+      }
+
+      fetch('/api/session', { credentials: 'include' })
+        .then(r => (r.ok ? r.json() : Promise.reject()))
+        .then(j => {
+          if (j && j.ok) {
+            document.body.classList.remove('pin-locked');
+            mainDashboard();
+          } else {
+            wireGateHandlers(tryWorkerLogin);
+            pinInput.focus();
+          }
+        })
+        .catch(() => {
+          wireGateHandlers(tryWorkerLogin);
+          pinInput.focus();
+        });
     });
   </script>
 </body>

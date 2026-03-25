@@ -33,6 +33,10 @@ __pycache__/
 # Optional local product signals for AI dashboard (copy from user_signals.json.example)
 ops/daily_company/data/user_signals.json
 
+# Do not publish pipeline JSON on public GitHub Pages (use Worker + secrets or local serve)
+docs/ai-company/latest-report.json
+docs/ai-company/history-export.json
+
 # Secrets (never commit)
 .env
 *.pem
