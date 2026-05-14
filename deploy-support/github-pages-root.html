@@ -3,18 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex, nofollow" />
-  <title>Chit Chat Social — chitchatsocials.com</title>
-  <meta name="description" content="Chit Chat Social iOS — official hubs for app support and corporate landing." />
+  <meta name="theme-color" content="#0a0f26" />
+  <meta name="description" content="Chit Chat Social — creators, chats, reels, Elite Command Center. Official chitchatsocials.com hubs." />
+  <title>Chit Chat Social · chitchatsocials.com</title>
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="Chit Chat Social · chitchatsocials.com" />
+  <meta property="og:description" content="Official support and corporate dashboard landing." />
+  <meta property="og:url" content="https://www.chitchatsocials.com/" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%2385e8ff"/><stop offset="100%" style="stop-color:%239f7aea"/></linearGradient></defs><rect rx="9" width="32" height="32" fill="%23121a42"/><path d="M8 21c5-10 17-11 17-11v6c0 9-17 13-17 5zm0 0z" fill="url(%23g)"/></svg>' />
   <style>
     :root {
-      --bg0: #0a0f26;
-      --bg1: #121a42;
-      --text: rgba(255,255,255,0.94);
-      --muted: rgba(255,255,255,0.68);
+      --bg0: #060912;
+      --bg1: #0e1735;
+      --text: rgba(255,255,255,0.96);
+      --muted: rgba(233,239,253,0.66);
       --neon: #85e8ff;
       --violet: #c7a9ff;
-      --radius: 16px;
+      --card: rgba(18,26,62,0.65);
+      --stroke: rgba(255,255,255,0.12);
+      --radius: 18px;
     }
     * { box-sizing: border-box; }
     body {
@@ -23,63 +31,101 @@
       min-height: 100vh;
       color: var(--text);
       background:
-        radial-gradient(ellipse 520px 360px at 12% -8%, rgba(133,232,255,0.22) 0%, transparent 55%),
-        radial-gradient(ellipse 480px 320px at 92% 6%, rgba(199,169,255,0.18) 0%, transparent 50%),
-        linear-gradient(165deg, var(--bg0) 0%, var(--bg1) 52%, #0d1538 100%);
+        radial-gradient(ellipse 700px 480px at 8% -6%, rgba(133,232,255,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse 560px 400px at 96% 4%, rgba(199,169,255,0.16) 0%, transparent 48%),
+        linear-gradient(168deg, var(--bg0) 0%, var(--bg1) 52%, #0a1028 100%);
       line-height: 1.55;
-      padding: 36px 20px 48px;
+      padding: 0;
     }
-    .shell { max-width: 520px; margin: 0 auto; }
-    h1 {
-      font-size: 1.45rem;
+    .band {
+      height: 3px;
+      background: linear-gradient(90deg, #52c7ff, #c7a9ff, #ff7ab8);
+    }
+    .shell { max-width: 540px; margin: 0 auto; padding: 44px 22px 56px; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.73rem;
       font-weight: 700;
-      letter-spacing: -0.02em;
-      margin: 0 0 8px;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
     }
-    .sub { color: var(--muted); font-size: 0.95rem; margin: 0 0 28px; }
-    .deck { display: flex; flex-direction: column; gap: 12px; }
+    .pill span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--neon), var(--violet));
+      box-shadow: 0 0 14px rgba(133,232,255,0.45);
+    }
+    h1 {
+      font-size: clamp(1.55rem, 5vw, 1.95rem);
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1.15;
+      margin: 0 0 10px;
+    }
+    .sub { color: var(--muted); font-size: 1.02rem; margin: 0 0 32px; max-width: 40ch; }
+    .deck { display: flex; flex-direction: column; gap: 14px; }
     .card {
       display: block;
       text-decoration: none;
       color: inherit;
-      background: rgba(15,23,62,0.55);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--card);
+      border: 1px solid var(--stroke);
       border-radius: var(--radius);
-      padding: 16px 18px;
-      transition: border-color 0.2s ease, transform 0.2s ease;
+      padding: 20px 22px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.18s ease;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
     .card:hover {
-      border-color: rgba(133,232,255,0.45);
-      transform: translateY(-1px);
+      border-color: rgba(133,232,255,0.42);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      transform: translateY(-2px);
     }
     .card strong {
-      font-size: 1.02rem;
+      font-size: 1.08rem;
       display: block;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       color: var(--neon);
     }
-    .card span { font-size: 0.85rem; color: var(--muted); }
-    .domain { margin-top: 28px; font-size: 0.82rem; color: var(--muted); text-align: center; }
-    .domain a { color: var(--violet); }
+    .card span { font-size: 0.88rem; color: var(--muted); line-height: 1.5; }
+    .hint {
+      margin-top: 32px;
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.15);
+      font-size: 0.84rem;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .hint strong { color: rgba(255,255,255,0.92); font-weight: 600; }
   </style>
 </head>
 <body>
+  <div class="band" aria-hidden="true"></div>
   <div class="shell">
-    <h1>Chit Chat Social</h1>
-    <p class="sub">Official site hubs at <strong style="color:var(--text)">chitchatsocials.com</strong>.</p>
+    <div class="pill"><span aria-hidden="true"></span> Chit Chat Social · web</div>
+    <h1>Welcome.</h1>
+    <p class="sub"><strong style="color:var(--text)">chitchatsocials.com</strong> hosts the live support page and links to corporate tooling stubs.</p>
 
     <div class="deck" role="navigation" aria-label="Site sections">
-      <a class="card" href="./support/" id="lnk-support">
-        <strong>App — Help &amp; Support</strong>
-        <span>Contact email, privacy &amp; terms — use this for App Store Review / Support URL.</span>
+      <a class="card" href="./support/">
+        <strong>iOS · Help &amp; support</strong>
+        <span>Email Contact, moderation context, Privacy &amp; Terms — paste this folder’s URL into App&nbsp;Store Connect as your <strong style="color:var(--muted)">Support URL</strong>.</span>
       </a>
-      <a class="card" href="./ai-company/" id="lnk-ops">
-        <strong>Corporate / Elite Command Center landing</strong>
-        <span>Dashboard stub — private ops connects via Worker (see README in repo).</span>
+      <a class="card" href="./ai-company/">
+        <strong>Elite Command Center · public landing</strong>
+        <span>Static stub for internal ops onboarding. Live dashboard uses separate secure infrastructure.</span>
       </a>
     </div>
 
-    <p class="domain">Prefer <strong>https://www.chitchatsocials.com/support/</strong> for App&nbsp;Store and marketing.</p>
+    <p class="hint">Suggested <strong>Support URL:</strong><br /><span style="word-break:break-all">https://www.chitchatsocials.com/support/</span></p>
   </div>
 </body>
 </html>

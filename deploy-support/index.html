@@ -3,115 +3,250 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chit Chat Social — Support</title>
-  <meta name="description" content="Official help &amp; support for the Chit Chat Social iOS app (chitchatsocials.com)." />
+  <title>Chit Chat Social — Help &amp; Support</title>
+  <meta name="description" content="Official support for Chit Chat Social on iOS. Contact email, privacy, terms, safety and moderation — chitchatsocials.com." />
   <link rel="canonical" href="https://www.chitchatsocials.com/support/" />
+  <meta name="theme-color" content="#0f1429" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:title" content="Chit Chat Social — Help &amp; Support" />
+  <meta property="og:description" content="Official contact for questions, bugs, accounts, safety, and moderation." />
+  <meta property="og:url" content="https://www.chitchatsocials.com/support/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:%2385e8ff"/><stop offset="100%" style="stop-color:%239f7aea"/></linearGradient></defs><rect rx="9" width="32" height="32" fill="%23121a42"/><path d="M8 21c5-10 17-11 17-11v6c0 9-17 13-17 5zm0 0z" fill="url(%23g)"/></svg>' />
   <style>
     :root {
-      --bg0: #f7f8fc;
-      --panel: rgba(255,255,255,0.92);
-      --text: #0f1429;
-      --muted: rgba(15,20,41,0.62);
-      --accent: #0a6abf;
-      --accent2: #5c3dcf;
-      --radius: 16px;
+      --bg0: #f4f6fc;
+      --bg1: #eef1fb;
+      --panel: rgba(255,255,255,0.96);
+      --text: #0c1024;
+      --muted: rgba(12,16,36,0.58);
+      --accent: #0968c9;
+      --accent-hover: #0757a8;
+      --violet-glow: rgba(92,61,207,0.12);
+      --cyan-glow: rgba(10,106,191,0.1);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --shadow: 0 4px 24px rgba(12,23,62,0.07), 0 16px 48px rgba(12,23,62,0.05);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      line-height: 1.6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+      line-height: 1.62;
       color: var(--text);
       background:
-        radial-gradient(ellipse 420px 280px at 10% -4%, rgba(10,106,191,0.08) 0%, transparent 60%),
-        radial-gradient(ellipse 380px 260px at 96% 2%, rgba(92,61,207,0.09) 0%, transparent 55%),
-        var(--bg0);
+        radial-gradient(ellipse 620px 420px at 5% -2%, var(--cyan-glow), transparent 55%),
+        radial-gradient(ellipse 540px 380px at 98% 4%, var(--violet-glow), transparent 52%),
+        linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 42%, var(--bg0) 100%);
       min-height: 100vh;
-      padding: 44px 20px 56px;
+      padding: 0;
     }
-    main {
-      max-width: 560px;
+    .band {
+      height: 4px;
+      background: linear-gradient(90deg, #52c7ff 0%, #9f7aea 52%, #ff6bb3 100%);
+    }
+    .wrap {
+      max-width: 600px;
       margin: 0 auto;
+      padding: 40px 20px 72px;
     }
-    .badge {
+    header { margin-bottom: 28px; }
+    .wordmark {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
+      gap: 10px;
+      font-size: 0.8125rem;
+      font-weight: 700;
       letter-spacing: 0.06em;
+      text-transform: uppercase;
       color: var(--muted);
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }
-    .badge span {
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: rgba(10,106,191,0.1);
-      color: var(--accent);
-      letter-spacing: 0.03em;
+    .wordmark-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #85e8ff, #c7a9ff);
+      box-shadow: 0 0 0 2px rgba(255,255,255,0.9);
     }
     h1 {
-      font-size: 1.45rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      margin: 0 0 12px;
+      font-size: clamp(1.5rem, 4.5vw, 1.75rem);
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      line-height: 1.25;
+      margin: 0 0 14px;
     }
-    .lead { margin: 0 0 1.25rem; color: var(--muted); font-size: 1.02rem; }
-    p { margin: 0.75rem 0; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; text-underline-offset: 3px; }
-    .box {
-      background: var(--panel);
-      border-radius: var(--radius);
-      padding: 18px 20px;
-      margin: 1.35rem 0;
-      border: 1px solid rgba(15,20,41,0.08);
-      box-shadow: 0 12px 40px rgba(15,23,62,0.06);
-    }
-    .email-line { font-size: 1.05rem; word-break: break-word; }
-    .fine { font-size: 0.88rem; color: var(--muted); line-height: 1.55; }
-    footer {
-      margin-top: 2rem;
-      padding-top: 1rem;
-      border-top: 1px solid rgba(15,20,41,0.08);
-      font-size: 0.9rem;
+    .lead {
+      margin: 0;
+      font-size: 1.065rem;
       color: var(--muted);
+      max-width: 46ch;
+    }
+    nav.quick {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px 16px;
+      gap: 10px 14px;
+      margin-top: 22px;
+    }
+    nav.quick a {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      padding: 6px 0;
+      border-bottom: 2px solid transparent;
+    }
+    nav.quick a:hover { border-bottom-color: var(--accent); }
+    .panel {
+      background: var(--panel);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(12,23,62,0.07);
+      box-shadow: var(--shadow);
+      padding: 22px 24px;
+      margin: 26px 0;
+    }
+    .panel h2 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--muted);
+      margin: 0 0 14px;
+    }
+    .btn-mail {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      box-sizing: border-box;
+      margin-top: 4px;
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #0a74d8 0%, #5c3dcf 100%);
+      color: #fff !important;
+      text-decoration: none;
+      transition: opacity 0.2s ease, transform 0.15s ease;
+      box-shadow: 0 4px 14px rgba(10,116,216,0.28);
+    }
+    .btn-mail:hover { opacity: 0.95; transform: translateY(-1px); }
+    .btn-mail:active { transform: translateY(0); }
+    .fine {
+      margin: 16px 0 0;
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .fine code {
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      background: rgba(12,23,62,0.06);
+      padding: 3px 8px;
+      border-radius: 8px;
+    }
+    .list-soft {
+      margin: 14px 0 0;
+      padding-left: 1.2rem;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+    .list-soft li { margin: 8px 0; }
+    p.body { margin: 0 0 1rem; }
+    footer {
+      margin-top: 40px;
+      padding-top: 22px;
+      border-top: 1px solid rgba(12,23,62,0.08);
+      display: grid;
+      gap: 12px;
+    }
+    .foot-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 20px;
       align-items: center;
       justify-content: space-between;
+      font-size: 0.9rem;
+      color: var(--muted);
     }
-    footer a { white-space: nowrap; }
-    .homelink { font-size: 0.87rem; }
+    .foot-row a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    .foot-row a:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .review-tag {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: rgba(12,23,62,0.45);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg0: #0a0d1a;
+        --bg1: #11162b;
+        --panel: rgba(22,27,52,0.92);
+        --text: rgba(248,249,252,0.96);
+        --muted: rgba(232,236,248,0.58);
+        --accent: #6ec8ff;
+        --cyan-glow: rgba(110,200,255,0.06);
+        --violet-glow: rgba(199,169,255,0.06);
+      }
+      .fine code { background: rgba(248,249,252,0.06); color: inherit; }
+      .panel { border-color: rgba(255,255,255,0.08); box-shadow: 0 8px 40px rgba(0,0,0,0.35); }
+      .btn-mail { box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+      .review-tag { color: rgba(232,236,248,0.38); }
+      footer { border-top-color: rgba(255,255,255,0.08); }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <div class="badge">chitchatsocials.com <span>iOS Support</span></div>
-    <h1>Help &amp; Support</h1>
-    <p class="lead">You’re on the official support contact page for <strong style="color:var(--text)">Chit Chat Social</strong> — creators, chats, reels, safety tools, and more.</p>
-    <p>Questions about your account, a bug report, or need a hand getting started? Email us — we reply within a few business days.</p>
+  <div class="band" aria-hidden="true"></div>
+  <div class="wrap">
+    <header>
+      <div class="wordmark"><span class="wordmark-dot" aria-hidden="true"></span> chitchatsocials.com</div>
+      <h1>Help &amp; support</h1>
+      <p class="lead">Official contact for <strong style="color:var(--text)">Chit Chat Social</strong> on iPhone and iPad — accounts, troubleshooting, moderation, privacy, and App&nbsp;Review.</p>
+      <nav class="quick" aria-label="Shortcuts">
+        <a href="#contact">Contact</a>
+        <a href="#safety">Safety</a>
+        <a href="https://chitchat.app/privacy">Privacy</a>
+        <a href="https://chitchat.app/terms">Terms</a>
+        <a href="https://www.chitchatsocials.com/">Brand home</a>
+      </nav>
+    </header>
 
-    <div class="box">
-      <p><strong>Contact support</strong></p>
-      <p class="email-line"><strong>Email:</strong>
-        <a href="mailto:bruce44+chitchat@getbusyllc.com?subject=Chit%20Chat%20Social%20Support">bruce44+chitchat@getbusyllc.com</a>
-      </p>
-      <p class="fine">The <code style="background:rgba(15,20,41,0.06);padding:2px 6px;border-radius:6px">+chitchat</code> tag routes to <strong>bruce44@getbusyllc.com</strong> so Chit Chat mail is easy to filter. If plus-addressing isn’t supported, use the main address and put “Chit Chat Social” in the subject line.</p>
-    </div>
+    <section class="panel" id="contact" aria-labelledby="contact-h">
+      <h2 id="contact-h">Reach us</h2>
+      <p class="body">Questions, bug reports, or account assistance — email is the fastest way.</p>
+      <a class="btn-mail" href="mailto:bruce44+chitchat@getbusyllc.com?subject=Chit%20Chat%20Social%20Support">
+        Email support — open mail app
+      </a>
+      <p class="fine"><strong>Address:</strong> <span style="word-break:break-all">bruce44+chitchat@getbusyllc.com</span></p>
+      <p class="fine">The <code>+chitchat</code> tag routes mail to <strong>bruce44@getbusyllc.com</strong> so conversations stay grouped. Without plus-addresses, mail the primary address with <strong>“Chit Chat Social”</strong> in the subject.</p>
+    </section>
 
-    <p><strong>Safety / abuse:</strong> In the app, use <strong>Report</strong> on posts or conversations and <strong>Block</strong> users who bother you. You can also email us with your handle and a short description of what happened.</p>
+    <section class="panel" id="safety" aria-labelledby="safety-h">
+      <h2 id="safety-h">Safety &amp; abuse</h2>
+      <p class="body">Inside the app, use <strong>Report</strong> on content that breaks our rules or <strong>Block</strong> accounts you don’t want to interact with. You may also email with your profile handle and what happened.</p>
+      <ul class="list-soft">
+        <li>We prioritize serious violations and impersonation concerns.</li>
+        <li>Typical turnaround: a few <strong>business days</strong> for routine requests.</li>
+      </ul>
+    </section>
 
     <footer>
-      <span class="fine homelink"><a href="https://www.chitchatsocials.com/">chitchatsocials.com</a> · Official brand home</span>
-      <span>
-        <a href="https://chitchat.app/privacy">Privacy</a>
-        ·
-        <a href="https://chitchat.app/terms">Terms</a>
-      </span>
+      <div class="foot-row">
+        <span><a href="https://www.chitchatsocials.com/">chitchatsocials.com</a> — marketing &amp; product</span>
+        <span>
+          <a href="https://chitchat.app/privacy">Privacy</a>
+          ·
+          <a href="https://chitchat.app/terms">Terms</a>
+        </span>
+      </div>
+      <p class="review-tag">This page satisfies App Store guideline support URL requirements.</p>
     </footer>
-  </main>
+  </div>
 </body>
 </html>
