@@ -8,7 +8,9 @@
 
 **Namecheap apex `A` @ host `Record`:** `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`. **CNAME:** Host **`www`** → **`almightybruce01.github.io`**. Repo paths: [`docs/ai-company/`](docs/ai-company/) · duplicate support [`docs/support/`](docs/support/). **`deploy-support/CNAME`** is `www.chitchatsocials.com`. Use **Pages → Source: GitHub Actions**. Canonical docs: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
 
-**If URLs 404:** Namecheap DNS is only half — **GitHub must list your hostname**. Repo **Settings → Pages → Custom domains**: add **`www.chitchatsocials.com`** and **`chitchatsocials.com`**, remove any **investli.org** entry. Today `curl -sI …/almightybruce01.github.io/chit-chat/` can **301 → investli.org** (Vercel 404); clearing the wrong domain stops that redirect. Then **Save** → wait for verification → **Enforce HTTPS**. Re-run Actions **Deploy support site** (**workflow_dispatch**) if needed.
+**If URLs 404:** Repo **Settings → Pages → Custom domains** must include **`www.chitchatsocials.com`** (+ apex **`chitchatsocials.com`**); DNS alone isn’t enough. **Remove every `investli.org` hostname** from this repo’s Pages domains — **`https://almightybruce01.github.io/chit-chat/`** can still **301 → investli** until that’s gone (Investli/Vercel 404).
+
+**HTTPS:** Use **`https://www.chitchatsocials.com/support/`** in App&nbsp;Store Connect (not **`http://`**, even if **`github.io/.../support/`** temporarily redirects to HTTP — Enforce HTTPS on `www` in Pages).
 
 ---
 

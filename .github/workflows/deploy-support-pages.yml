@@ -39,6 +39,7 @@ jobs:
           cp deploy-support/github-pages-root.html _site/index.html
           cp -r docs/ai-company _site/ai-company
           cp deploy-support/index.html _site/support/index.html
+          touch _site/.nojekyll
           if [ -f deploy-support/CNAME ]; then cp deploy-support/CNAME _site/CNAME; fi
       - uses: actions/upload-pages-artifact@v3
         with:
