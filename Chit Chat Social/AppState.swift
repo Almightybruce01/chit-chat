@@ -2,15 +2,26 @@ import Foundation
 import SwiftUI
 import AVFoundation
 import UIKit
+import CryptoKit
+#if canImport(FirebaseAuth)
+import FirebaseAuth
+#endif
 
 @MainActor
 final class AppState: ObservableObject {
     private let backend: BackendServicing
     private let credentialsStorageKey = "chitchat.local.credentials"
+    private let passwordResetPendingPrefix = "chitchat.pwdreset.pending."
+    private let passwordResetUserRatePrefix = "chitchat.pwdreset.ratelimit.user."
+    private let passwordResetGlobalRateKey = "chitchat.pwdreset.ratelimit.global"
+    private let passwordResetLockPrefix = "chitchat.pwdreset.lockout."
     private let loggedInAccountsKey = "chitchat.logged.accounts"
     private let recentSearchesStorageKey = "chitchat.recent.searches"
     private let savedPostsStoragePrefix = "chitchat.saved.posts."
     private let sessionStorageKey = "chitchat.session.v1"
+
+    /// Used when Firebase signs out so `AppState+FirebaseAuth` clears the same key as `restoreSession`.
+    static let sessionUserDefaultsKey = "chitchat.session.v1"
     private let engagementStoragePrefix = "chitchat.engagement."
     private let profilePhotoStoragePrefix = "chitchat.profile.photo."
     private let profileGifStoragePrefix = "chitchat.profile.gif."
@@ -42,27 +53,25 @@ final class AppState: ObservableObject {
     /// When set, MainTabView switches to this tab index and clears. Used for Reels exit escape hatch.
     @Published var requestedTabIndex: Int?
     @Published var session: AppSession?
-    @Published var currentUser = UserProfile(
-        id: UUID(),
-        username: "Almighty_Bruce_",
-        handle: "@Almighty_Bruce_",
-        enterpriseAlias: "Brian B.",
-        displayName: "Brian Bruce",
-        followers: 1875,
-        verificationStatus: .verifiedInternal,
-        allowEnterpriseReveal: false,
-        linkedPlatforms: [.instagram, .youtube]
-    )
+    /// Set when Firebase Auth has a user; drives main UI gate with `ContentView`.
+    @Published var firebaseSignedInUID: String?
+    /// From Firestore `admin_users/{uid}` (self-read); set after sign-in.
+    @Published var isInternalAdminCache = false
+
+    @Published var currentUser = AppState.makeGuestUserProfile()
 
     @Published var posts: [PostItem] = [
         PostItem(
             id: UUID(),
             authorHandle: "@chitchatsocial",
-            caption: "Welcome to the ultimate social media app.",
+            caption: "Welcome to the ultimate social media app.\n\n#ad",
             type: .post,
             createdAt: Date(),
             city: "",
-            isCollab: false
+            isCollab: false,
+            isSponsoredAd: true,
+            sponsorBrandHandle: "@chitchatsocial",
+            sponsorExternalURL: "https://chitchat.app"
         ),
         PostItem(
             id: UUID(),
@@ -140,11 +149,22 @@ final class AppState: ObservableObject {
     ]
     @Published var socialMusicSyncEnabled = true
     @Published var socialFaceEmojiMask = "😎"
-    @Published var isLiveNow = false
-    @Published var liveViewerCount = 0
-    @Published var liveComments: [LiveCommentItem] = []
+    /// Active live broadcasts keyed by normalized host @handle.
+    @Published private(set) var liveSessionsByHost: [String: LiveBroadcastSession] = [:]
+    /// Full-screen countdown before `startLiveSession` (5 … 1). Nil when idle.
+    @Published private(set) var liveGoLiveCountdown: Int?
+    /// Presented live room (viewer or host). Nil when closed.
+    @Published var liveSheetHost: String?
+    /// Host handle normalized — current account is watching this live (audience).
+    @Published private(set) var liveAudienceHost: String?
     @Published var liveCoHosts: [String] = ["@creatorone"]
     @Published var audienceRoleByHandle: [String: SocialLiveAudienceRole] = [:]
+    private var liveCountdownTask: Task<Void, Never>?
+
+    /// True when this account has an active live broadcast.
+    var isLiveNow: Bool {
+        liveSessionsByHost[normalizedSocialHandle(currentUser.handle)] != nil
+    }
 
     @Published var songQueue: [SongQueueItem] = [
         SongQueueItem(id: UUID(), title: "Midnight Drive", artist: "Nova Lane", requestedBy: "@reelqueen"),
@@ -253,6 +273,9 @@ final class AppState: ObservableObject {
     @Published var recentSearches: [String] = []
     @Published var mutedThreadIDs: Set<UUID> = []
     @Published var blockedHandles: Set<String> = []
+    /// User-submitted reports (stored locally for trust & safety workflow).
+    @Published private(set) var userContentReports: [UserContentReport] = []
+    private let userContentReportsStorageKey = "chitchat.user.content.reports.v1"
     @Published var hiddenTaggedPostIDs: Set<UUID> = []
     @Published var savedPostIDs: Set<UUID> = []
     @Published var seenStoryHandles: Set<String> = []
@@ -287,15 +310,286 @@ final class AppState: ObservableObject {
     @Published var scheduledPosts: [ScheduledPostPlan] = []
     @Published var analyticsSnapshots: [AnalyticsSnapshot] = []
     private var socialGraph: [String: Set<String>] = [
-        "@chitchat": ["@creatorone", "@coachmia", "@djmike", "@streetvault", "@almighty_bruce_"],
-        "@creatorone": ["@chitchat", "@djmike", "@coachmia", "@almighty_bruce_"],
-        "@coachmia": ["@chitchat", "@creatorone", "@dallasbiz", "@almighty_bruce_"],
-        "@djmike": ["@chitchat", "@creatorone", "@streetvault", "@almighty_bruce_"]
+        "@chitchat": ["@creatorone", "@coachmia", "@djmike", "@streetvault", "@guest"],
+        "@creatorone": ["@chitchat", "@djmike", "@coachmia", "@guest"],
+        "@coachmia": ["@chitchat", "@creatorone", "@dallasbiz", "@guest"],
+        "@djmike": ["@chitchat", "@creatorone", "@streetvault", "@guest"]
     ]
 
     var canAccessInternalDashboard: Bool {
-        ["almighty_bruce_", "admin", "owner"].contains(currentUser.username.lowercased())
+        isInternalAdminCache
     }
+
+    /// Remote kill switch + disclosure for in-app **branded / partner** promos (Instagram-style), not third‑party ad networks.
+    @Published var nativeSponsoredFeedEnabled = false
+    @Published var sponsorDisclosureRemoteLabel = "Sponsored"
+
+    /// In-feed sponsored posts and paid reshares (subject to `nativeSponsoredFeedEnabled` from ops).
+    var canRunPaidAds: Bool {
+        nativeSponsoredFeedEnabled && (currentUser.isAdAccount || currentUser.isBusinessAccount)
+    }
+
+    /// `true` when email is missing or still an Apple/Google placeholder — prompt user to update in Profile.
+    /// Phone is optional for core app use (Guideline 5.1.1).
+    var needsContactInfoUpdate: Bool {
+        let em = currentUser.accountEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let badEmail = em.isEmpty || Self.isPlaceholderAccountEmail(em)
+        return badEmail
+    }
+
+    private static let pendingEmailHost = "pending.chitchat"
+    private static let placeholderAccountPhoneDigits = "0000000000"
+
+    private static func placeholderAccountEmail(forUsername username: String) -> String {
+        "\(username.lowercased())@\(pendingEmailHost)"
+    }
+
+    private static func isPlaceholderAccountEmail(_ raw: String) -> Bool {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().hasSuffix("@\(pendingEmailHost)")
+    }
+
+    private static func isOAuthProvider(_ provider: String) -> Bool {
+        provider == "apple.com" || provider == "google.com"
+    }
+
+    /// Validates signup / profile email (not for Firebase delivery).
+    func validateAccountEmail(_ raw: String) -> String? {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return "Email is required." }
+        guard t.contains("@") else { return "Enter a valid email address." }
+        let parts = t.split(separator: "@")
+        guard parts.count == 2, !parts[0].isEmpty, parts[1].contains(".") else { return "Enter a valid email address." }
+        return nil
+    }
+
+    /// Validates phone — digits only stored; at least 10 digits; rejects the OAuth placeholder.
+    func validateAccountPhone(_ raw: String) -> String? {
+        let digits = raw.filter(\.isNumber)
+        guard digits.count >= 10 else { return "Phone number must include at least 10 digits." }
+        guard digits != Self.placeholderAccountPhoneDigits else { return "Enter a real phone number (not placeholder digits)." }
+        return nil
+    }
+
+    /// Update contact info from Profile (real email + optional phone replace Apple/placeholder values).
+    @discardableResult
+    func updateAccountContactInfo(email: String, phone: String) -> String? {
+        if let err = validateAccountEmail(email) { return err }
+        let digits = phone.filter(\.isNumber)
+        if !digits.isEmpty {
+            if digits.count < 10 { return "Phone number must include at least 10 digits." }
+            if digits == Self.placeholderAccountPhoneDigits { return "Enter a real phone number (not placeholder digits)." }
+            currentUser.accountPhone = digits
+        } else {
+            currentUser.accountPhone = Self.placeholderAccountPhoneDigits
+        }
+        currentUser.accountEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        syncCurrentUserInDirectory()
+        Task {
+            try? await backend.syncUserProfile(currentUser)
+        }
+        return nil
+    }
+
+    private struct PendingPasswordReset: Codable {
+        var usernameKey: String
+        var emailLowercased: String
+        var salt: String
+        var codeHashHex: String
+        var expiresAt: Date
+        var failedAttempts: Int
+    }
+
+    private struct RateWindow: Codable {
+        var count: Int
+        var windowStart: Date
+    }
+
+    private static func sha256Hex(_ utf8: String) -> String {
+        let digest = SHA256.hash(data: Data(utf8.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func passwordResetCodeHash(code: String, salt: String, usernameKey: String) -> String {
+        sha256Hex("\(code)|\(salt)|\(usernameKey)")
+    }
+
+    private func passwordResetLockUntil(usernameKey: String) -> Date? {
+        guard let t = UserDefaults.standard.object(forKey: passwordResetLockPrefix + usernameKey) as? TimeInterval else { return nil }
+        let d = Date(timeIntervalSince1970: t)
+        return d > Date() ? d : nil
+    }
+
+    private func setPasswordResetLock(usernameKey: String, minutes: Int) {
+        let until = Date().addingTimeInterval(Double(minutes * 60))
+        UserDefaults.standard.set(until.timeIntervalSince1970, forKey: passwordResetLockPrefix + usernameKey)
+    }
+
+    private func clearPasswordResetLock(usernameKey: String) {
+        UserDefaults.standard.removeObject(forKey: passwordResetLockPrefix + usernameKey)
+    }
+
+    private func consumeRateWindow(
+        storageKey: String,
+        limit: Int,
+        windowSeconds: TimeInterval
+    ) -> String? {
+        let now = Date()
+        var window = RateWindow(count: 0, windowStart: now)
+        if let data = UserDefaults.standard.data(forKey: storageKey),
+           let w = try? JSONDecoder().decode(RateWindow.self, from: data) {
+            window = w
+        }
+        if now.timeIntervalSince(window.windowStart) > windowSeconds {
+            window = RateWindow(count: 0, windowStart: now)
+        }
+        if window.count >= limit {
+            return "Too many attempts. Wait before trying again."
+        }
+        window.count += 1
+        if let data = try? JSONEncoder().encode(window) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+        return nil
+    }
+
+    private func pendingPasswordResetStorageKey(usernameKey: String) -> String {
+        passwordResetPendingPrefix + usernameKey
+    }
+
+    private func clearPendingPasswordReset(usernameKey: String) {
+        UserDefaults.standard.removeObject(forKey: pendingPasswordResetStorageKey(usernameKey: usernameKey))
+    }
+
+    /// Step 1: validates account, rate limits, emails a 6-digit code via `BackendServicing.sendPasswordResetCode` (production should use real SMTP).
+    func requestPasswordResetCode(username: String, email: String) async -> String? {
+        if let err = consumeRateWindow(
+            storageKey: passwordResetGlobalRateKey,
+            limit: 20,
+            windowSeconds: 3600
+        ) { return err }
+
+#if canImport(FirebaseAuth)
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedEmail.isEmpty, validateAccountEmail(trimmedEmail) == nil {
+            do {
+                try await Auth.auth().sendPasswordReset(withEmail: trimmedEmail)
+                return nil
+            } catch {
+                return nil
+            }
+        }
+#endif
+
+        guard let cleaned = normalizedUsername(from: username) else { return "Invalid username." }
+        let key = cleaned.lowercased()
+
+        if let lock = passwordResetLockUntil(usernameKey: key) {
+            let f = RelativeDateTimeFormatter()
+            f.unitsStyle = .short
+            return "Too many failed codes. Try again \(f.localizedString(for: lock, relativeTo: Date()))."
+        }
+
+        guard localCredentials[key] != nil else { return "No password saved for that username on this device." }
+        guard let profile = internalUsers.first(where: { $0.username.lowercased() == key }) else { return "Account not found on this device." }
+        let typed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let saved = profile.accountEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !saved.isEmpty else {
+            return "No email on file. Sign in and add your email under Profile, or create a new account."
+        }
+        guard !Self.isPlaceholderAccountEmail(saved) else {
+            return "Add a real email under Profile before using password reset."
+        }
+        guard typed == saved else {
+            return "That email doesn’t match the address on file for this username."
+        }
+
+        if let err = consumeRateWindow(
+            storageKey: passwordResetUserRatePrefix + key,
+            limit: 5,
+            windowSeconds: 3600
+        ) { return err }
+
+        let code = String(format: "%06d", Int.random(in: 0...999_999))
+        let salt = UUID().uuidString
+        let hash = Self.passwordResetCodeHash(code: code, salt: salt, usernameKey: key)
+        let payload = PendingPasswordReset(
+            usernameKey: key,
+            emailLowercased: saved,
+            salt: salt,
+            codeHashHex: hash,
+            expiresAt: Date().addingTimeInterval(900),
+            failedAttempts: 0
+        )
+        if let data = try? JSONEncoder().encode(payload) {
+            UserDefaults.standard.set(data, forKey: pendingPasswordResetStorageKey(usernameKey: key))
+        }
+
+        do {
+            try await backend.sendPasswordResetCode(
+                toEmail: saved,
+                username: cleaned,
+                code: code,
+                validMinutes: 15
+            )
+        } catch {
+            clearPendingPasswordReset(usernameKey: key)
+            return "Could not send reset email. Try again later."
+        }
+        return nil
+    }
+
+    /// Step 2: verify emailed code, then set a new password.
+    func completePasswordResetWithCode(username: String, email: String, code: String, newPassword: String) -> String? {
+        guard newPassword.count >= 8 else { return "New password must be at least 8 characters." }
+        guard let cleaned = normalizedUsername(from: username) else { return "Invalid username." }
+        let key = cleaned.lowercased()
+
+        if let lock = passwordResetLockUntil(usernameKey: key) {
+            let f = RelativeDateTimeFormatter()
+            f.unitsStyle = .short
+            return "Too many failed attempts. Try again \(f.localizedString(for: lock, relativeTo: Date()))."
+        }
+
+        guard let data = UserDefaults.standard.data(forKey: pendingPasswordResetStorageKey(usernameKey: key)),
+              var pending = try? JSONDecoder().decode(PendingPasswordReset.self, from: data)
+        else {
+            return "No active reset for this username. Request a new code."
+        }
+
+        let typedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard typedEmail == pending.emailLowercased else {
+            return "Email does not match this reset."
+        }
+
+        if Date() > pending.expiresAt {
+            clearPendingPasswordReset(usernameKey: key)
+            return "That code expired. Request a new one."
+        }
+
+        let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmedCode.count == 6, trimmedCode.allSatisfy(\.isNumber) else {
+            return "Enter the 6-digit code from your email."
+        }
+
+        let candidate = Self.passwordResetCodeHash(code: trimmedCode, salt: pending.salt, usernameKey: key)
+        guard candidate == pending.codeHashHex else {
+            pending.failedAttempts += 1
+            if pending.failedAttempts >= 5 {
+                clearPendingPasswordReset(usernameKey: key)
+                setPasswordResetLock(usernameKey: key, minutes: 30)
+            } else if let reencode = try? JSONEncoder().encode(pending) {
+                UserDefaults.standard.set(reencode, forKey: pendingPasswordResetStorageKey(usernameKey: key))
+            }
+            return "Invalid code."
+        }
+
+        localCredentials[key] = newPassword
+        saveCredentials()
+        clearPendingPasswordReset(usernameKey: key)
+        clearPasswordResetLock(usernameKey: key)
+        return nil
+    }
+
     @Published var resume = ResumeProfile(
         headline: "Creator, producer, and community builder",
         skills: ["Content Strategy", "Live Production", "Brand Partnerships"],
@@ -352,7 +646,6 @@ final class AppState: ObservableObject {
     init(backend: BackendServicing = LocalBackendService()) {
         self.backend = backend
         self.internalUsers = [
-            currentUser,
             UserProfile(
                 id: UUID(),
                 username: "creatorone",
@@ -392,8 +685,9 @@ final class AppState: ObservableObject {
         seedEliteDemoNetwork()
         loadCredentials()
         loadVerificationRequests()
-        loadProfilePhotoMap()
         loadLoggedInAccounts()
+        purgeLegacySeededAccountArtifacts()
+        loadProfilePhotoMap()
         loadRecentSearches()
         loadProfileModeState()
         loadInterestState()
@@ -413,16 +707,149 @@ final class AppState: ObservableObject {
         loadExecutionQueueSettings()
         loadExecutionQueueRestorePoint()
         loadModerationPolicyState()
-        if completedExecutionQueueIDs.count < 1000 {
-            markAllExecutionItemsComplete()
+        Task { @MainActor in
+            if self.completedExecutionQueueIDs.count < 1000 {
+                self.markAllExecutionItemsComplete()
+            }
+            self.captureExecutionCompletionSnapshotIfNeededDaily()
+            self.ensurePostMediaCoverage()
         }
-        captureExecutionCompletionSnapshotIfNeededDaily()
         if enabledSuperFeatureIDs.isEmpty {
             enableAllSuperFeatures()
         }
-        ensurePostMediaCoverage()
         loadLocalCityFromDefaults()
-        registerLoggedInAccount(currentUser.username)
+#if canImport(FirebaseAuth) && canImport(FirebaseFirestore)
+        installFirebaseAuthBridge()
+#endif
+    }
+
+    /// Offline / unit-test sign-up using device-local credentials only (not Firebase).
+    func signUpLocalForTesting(
+        username: String,
+        password: String,
+        accountEmail: String,
+        accountPhone: String,
+        personalDisplayName: String? = nil,
+        business: BusinessRegistration? = nil
+    ) -> String? {
+        guard let cleaned = normalizedUsername(from: username) else {
+            return "Username must be 3+ characters and only letters, numbers, . or _"
+        }
+        guard !ReservedHandles.isReserved(cleaned) else {
+            return "This username is reserved."
+        }
+        guard password.count >= 8 else {
+            return "Password must be at least 8 characters."
+        }
+        let trimmedEmail = accountEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let err = validateAccountEmail(trimmedEmail) { return err }
+        if business == nil {
+            let p = accountPhone.filter(\.isNumber)
+            if !p.isEmpty, p.count < 10 { return "Phone number must include at least 10 digits if provided." }
+            if !p.isEmpty, p == Self.placeholderAccountPhoneDigits { return "Enter a real phone number (not placeholder digits)." }
+        }
+        let key = cleaned.lowercased()
+        if localCredentials[key] != nil {
+            return "Username already exists."
+        }
+        if internalUsers.contains(where: { $0.username.lowercased() == key }) {
+            return "Username already exists."
+        }
+        if let registration = business {
+            if let err = validateBusinessRegistration(registration) { return err }
+        }
+        localCredentials[key] = password
+        saveCredentials()
+        currentUser.username = cleaned
+        currentUser.handle = "@\(cleaned)"
+        currentUser.accountEmail = trimmedEmail
+        currentUser.verificationStatus = .unverified
+        clearBusinessRegistrationOnCurrentUser()
+        if let registration = business {
+            applyBusinessRegistration(registration)
+            currentUser.accountPhone = registration.phone.filter(\.isNumber)
+            guard currentUser.accountPhone.count >= 10 else {
+                return "Enter a valid business phone (10+ digits)."
+            }
+            guard currentUser.accountPhone != Self.placeholderAccountPhoneDigits else {
+                return "Enter a real business phone number."
+            }
+        } else {
+            let rawName = personalDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if rawName.isEmpty {
+                currentUser.displayName = cleaned
+                currentUser.enterpriseAlias = cleaned
+            } else {
+                currentUser.displayName = rawName
+                currentUser.enterpriseAlias = rawName
+            }
+            let phoneDigits = accountPhone.filter(\.isNumber)
+            currentUser.accountPhone = phoneDigits.isEmpty ? Self.placeholderAccountPhoneDigits : phoneDigits
+        }
+        registerLoggedInAccount(cleaned)
+        syncCurrentUserInDirectory()
+        runPostLoginAccountDataReload()
+        beginSession(provider: "local_test")
+        firebaseSignedInUID = "local_\(key)"
+        return nil
+    }
+
+    func logInLocalForTesting(username: String, password: String) -> String? {
+        guard let cleaned = normalizedUsername(from: username) else {
+            return "Invalid username."
+        }
+        let key = cleaned.lowercased()
+        guard localCredentials[key] == password else {
+            return "Incorrect username or password."
+        }
+        if let existing = internalUsers.first(where: { $0.username.lowercased() == key }) {
+            currentUser = existing
+        } else {
+            currentUser.username = cleaned
+            currentUser.handle = "@\(cleaned)"
+        }
+        registerLoggedInAccount(cleaned)
+        syncCurrentUserInDirectory()
+        runPostLoginAccountDataReload()
+        beginSession(provider: "local_test")
+        firebaseSignedInUID = "local_\(key)"
+        return nil
+    }
+
+    func runPostLoginAccountDataReload() {
+        refreshCurrentProfileMedia()
+        loadSavedPosts()
+        loadProfileQuoteState()
+        loadProfileModeState()
+        loadInterestState()
+        loadReelCollections()
+        loadExploreSignals()
+        loadSeenStoryHandles()
+        restoreEngagementState()
+        loadScheduledPosts()
+        loadAnalyticsSnapshots()
+        loadExecutionQueueProgress()
+        loadExecutionQueueSnapshots()
+        loadExecutionQueueSettings()
+        loadExecutionQueueRestorePoint()
+        captureExecutionCompletionSnapshotIfNeededDaily()
+    }
+
+    private static func makeGuestUserProfile() -> UserProfile {
+        let guestID = UUID(uuidString: "00000000-0000-0000-0000-000000000001") ?? UUID()
+        return UserProfile(
+            id: guestID,
+            username: "guest",
+            handle: "@guest",
+            accountEmail: "",
+            accountPhone: "",
+            enterpriseAlias: "Guest",
+            displayName: "Guest",
+            followers: 0,
+            verificationStatus: .unverified,
+            allowEnterpriseReveal: false,
+            linkedPlatforms: []
+        )
     }
 
     private func seedEliteDemoNetwork() {
@@ -485,7 +912,7 @@ final class AppState: ObservableObject {
         var seededPosts: [PostItem] = []
         var seededComments: [UUID: [PostComment]] = [:]
         for (userIndex, user) in mergedGenerated.enumerated() {
-            for postIndex in 1...10 {
+            for postIndex in 1...5 {
                 let type = types[(postIndex + userIndex) % types.count]
                 let createdAt = Date().addingTimeInterval(TimeInterval(-((userIndex * 10 + postIndex) * 4200)))
                 let audience: PostAudience = postIndex % 6 == 0 ? .followers : .public
@@ -671,13 +1098,25 @@ final class AppState: ObservableObject {
         blockNudity: Bool,
         surfaceStyle: PostSurfaceStyle = .chit,
         taggedHandles: [String] = [],
-        combinedOwnerHandle: String? = nil
+        combinedOwnerHandle: String? = nil,
+        isSponsoredAd: Bool = false,
+        sponsorBrandHandle: String = "",
+        sponsorExternalURL: String = "",
+        sponsoredSourcePostID: UUID? = nil
     ) -> ModerationResult {
         clearExpiredPolicyBanIfNeeded()
         if isPolicySuspendedNow {
             return ModerationResult(
                 label: .accountSuspended,
                 reason: policySuspensionUserMessage
+            )
+        }
+        let sponsorBrandNorm = normalizedSponsorHandle(sponsorBrandHandle)
+        if isSponsoredAd, !sponsorBrandNorm.isEmpty, !canRunPaidAds {
+            return ModerationResult(
+                label: .sponsoredNotEligible,
+                reason:
+                    "Sponsored posts need an ad-enabled account (Profile → Ad account or verified business) and branded promos enabled by your program. Set Launch Settings → Partner program flags URL to sync the switch."
             )
         }
         if type == .reel || type == .shortVideo {
@@ -727,10 +1166,15 @@ final class AppState: ObservableObject {
                 )
                 : imageData
             let finalVideoData: Data? = (type == .reel || type == .shortVideo || type == .story) ? videoData : nil
+            let brand = sponsorBrandNorm
+            let disclosure = isSponsoredAd && !brand.isEmpty
+            let sponsoredCaption = disclosure && !caption.localizedCaseInsensitiveContains("#ad")
+                ? "\(caption)\n\n#ad"
+                : caption
             let created = PostItem(
                 id: UUID(),
                 authorHandle: currentUser.handle,
-                caption: caption,
+                caption: sponsoredCaption,
                 type: type,
                 createdAt: Date(),
                 city: localCity,
@@ -749,7 +1193,11 @@ final class AppState: ObservableObject {
                 surfaceStyle: surfaceStyle,
                 taggedHandles: taggedHandles,
                 combinedOwnerHandle: combinedOwnerHandle,
-                violenceWarningRequired: violenceWarning
+                violenceWarningRequired: violenceWarning,
+                isSponsoredAd: isSponsoredAd && !brand.isEmpty,
+                sponsorBrandHandle: brand,
+                sponsorExternalURL: sponsorExternalURL.trimmingCharacters(in: .whitespacesAndNewlines),
+                sponsoredSourcePostID: sponsoredSourcePostID
             )
             posts.insert(created, at: 0)
             newPost = created
@@ -757,7 +1205,7 @@ final class AppState: ObservableObject {
             if violenceWarning {
                 notifyPosterViolenceWarningPosted()
             }
-        case .missingRequiredMedia, .accountSuspended:
+        case .missingRequiredMedia, .accountSuspended, .sponsoredNotEligible:
             return moderationResult
         }
 
@@ -768,6 +1216,53 @@ final class AppState: ObservableObject {
             try? await backend.logModerationEvent(moderationResult.reason)
         }
         return moderationResult
+    }
+
+    func normalizedSponsorHandle(_ raw: String) -> String {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return "" }
+        return t.hasPrefix("@") ? t : "@\(t)"
+    }
+
+    /// Placeholder web profile until in-app deep links exist for every brand handle.
+    func openSponsorBrandProfile(handle: String) {
+        let h = handle.replacingOccurrences(of: "@", with: "")
+            .addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? ""
+        guard !h.isEmpty, let url = URL(string: "https://chitchat.app/u/\(h)") else { return }
+        UIApplication.shared.open(url)
+    }
+
+    func openSponsorExternalURL(_ raw: String) {
+        let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let url = URL(string: t),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https" else { return }
+        UIApplication.shared.open(url)
+    }
+
+    /// Heuristic “AI” ad lines for sponsors (on-device templates; replace with server LLM when wired).
+    func suggestedAdCopy(for productNote: String, sponsorBrandHandle: String = "") -> String {
+        let stem = productNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        let brand = normalizedSponsorHandle(sponsorBrandHandle).trimmingCharacters(in: .whitespacesAndNewlines)
+        let base: String
+        if stem.isEmpty && brand.isEmpty {
+            base = "New drop for creators on Chit Chat Social."
+        } else if stem.isEmpty {
+            base = "See what \(brand) is sharing — tap the brand link to learn more."
+        } else {
+            base = stem
+        }
+        let hooks = [
+            "Tap through to shop — limited run.",
+            "Official partner post. See link in thread.",
+            "Swipe up energy: save this before it’s gone."
+        ]
+        let hook = hooks[abs(base.hashValue) % hooks.count]
+        var body = "\(base)\n\n\(hook)"
+        if !brand.isEmpty {
+            body += "\n\n\(brand)"
+        }
+        return "\(body)\n\n#ad #sponsored"
     }
 
     // MARK: - Trust & safety (AI monitoring)
@@ -1345,32 +1840,135 @@ final class AppState: ObservableObject {
         corporateMeetingRooms.insert(contentsOf: [a, b], at: 0)
     }
 
+    func scheduleStartLiveSession(headline: String) {
+        guard !isLiveNow else { return }
+        cancelLiveCountdown()
+        liveCountdownTask = Task { @MainActor in
+            for remaining in stride(from: 5, through: 1, by: -1) {
+                if Task.isCancelled { return }
+                liveGoLiveCountdown = remaining
+                HapticTokens.light()
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+            }
+            guard !Task.isCancelled else { return }
+            liveGoLiveCountdown = nil
+            startLiveSession(headline: headline)
+        }
+    }
+
+    func cancelLiveCountdown() {
+        liveCountdownTask?.cancel()
+        liveCountdownTask = nil
+        liveGoLiveCountdown = nil
+    }
+
+    func normalizedSocialHandle(_ handle: String) -> String {
+        let t = handle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.isEmpty { return "@guest" }
+        return t.hasPrefix("@") ? t.lowercased() : "@\(t.lowercased())"
+    }
+
+    func isHandleLive(_ handle: String) -> Bool {
+        liveSessionsByHost[normalizedSocialHandle(handle)] != nil
+    }
+
+    func liveSession(for handle: String) -> LiveBroadcastSession? {
+        liveSessionsByHost[normalizedSocialHandle(handle)]
+    }
+
+    func liveCommentsThread(for host: String) -> [LiveCommentItem] {
+        liveSession(for: host)?.comments ?? []
+    }
+
+    func liveViewerCount(for host: String) -> Int {
+        liveSession(for: host)?.viewerHandles.count ?? 0
+    }
+
+    func otherLiveHostHandles(excludingCurrentUser: Bool = true, limit: Int = 8) -> [String] {
+        let keys = liveSessionsByHost.keys.sorted()
+        let mine = normalizedSocialHandle(currentUser.handle)
+        let filtered = excludingCurrentUser ? keys.filter { $0 != mine } : keys
+        return Array(filtered.prefix(limit))
+    }
+
+    func presentLiveRoom(for handle: String) {
+        guard isHandleLive(handle) else { return }
+        liveSheetHost = normalizedSocialHandle(handle)
+    }
+
+    func dismissLiveRoom() {
+        liveSheetHost = nil
+    }
+
+    func joinLiveSession(host: String) {
+        let key = normalizedSocialHandle(host)
+        guard var session = liveSessionsByHost[key] else { return }
+        let selfKey = normalizedSocialHandle(currentUser.handle)
+        guard key != selfKey else { return }
+        session.viewerHandles.insert(selfKey)
+        liveSessionsByHost[key] = session
+        liveAudienceHost = key
+        liveSheetHost = key
+        HapticTokens.success()
+    }
+
+    func leaveLiveSessionAsViewer() {
+        guard let host = liveAudienceHost else {
+            liveSheetHost = nil
+            return
+        }
+        let key = normalizedSocialHandle(host)
+        if var session = liveSessionsByHost[key] {
+            session.viewerHandles.remove(normalizedSocialHandle(currentUser.handle))
+            liveSessionsByHost[key] = session
+        }
+        liveAudienceHost = nil
+        liveSheetHost = nil
+        HapticTokens.light()
+    }
+
     func startLiveSession(headline: String) {
-        isLiveNow = true
-        liveViewerCount = Int.random(in: 44...320)
-        liveComments = [
+        let key = normalizedSocialHandle(currentUser.handle)
+        let seedComments = [
             LiveCommentItem(id: UUID(), authorHandle: "@fan_live", text: "We are in!", createdAt: Date()),
             LiveCommentItem(id: UUID(), authorHandle: "@creatorone", text: "Drop the product link 🔥", createdAt: Date().addingTimeInterval(-20))
         ]
+        liveSessionsByHost[key] = LiveBroadcastSession(headline: headline, viewerHandles: [], comments: seedComments)
         addActivity(type: .message, detail: "Started live: \(headline)")
+        HapticTokens.success()
     }
 
     func endLiveSession() {
-        isLiveNow = false
+        cancelLiveCountdown()
+        let key = normalizedSocialHandle(currentUser.handle)
+        liveSessionsByHost.removeValue(forKey: key)
+        if liveAudienceHost == key { liveAudienceHost = nil }
+        if liveSheetHost == key { liveSheetHost = nil }
     }
 
     func postLiveComment(_ text: String, from handle: String? = nil) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        liveComments.insert(
+        let selfKey = normalizedSocialHandle(currentUser.handle)
+        let key: String? = {
+            if let audience = liveAudienceHost, liveSessionsByHost[normalizedSocialHandle(audience)] != nil {
+                return normalizedSocialHandle(audience)
+            }
+            if isLiveNow { return selfKey }
+            return nil
+        }()
+        guard let threadKey = key, var session = liveSessionsByHost[threadKey] else { return }
+        let author = handle.map { normalizedSocialHandle($0) } ?? selfKey
+        session.comments.insert(
             LiveCommentItem(
                 id: UUID(),
-                authorHandle: handle ?? currentUser.handle,
+                authorHandle: author,
                 text: trimmed,
                 createdAt: Date()
             ),
             at: 0
         )
+        liveSessionsByHost[threadKey] = session
     }
 
     func applySocialFaceEmojiMask(_ emoji: String) {
@@ -1563,6 +2161,8 @@ final class AppState: ObservableObject {
             id: UUID(),
             username: cleaned,
             handle: "@\(cleaned)",
+            accountEmail: "",
+            accountPhone: Self.placeholderAccountPhoneDigits,
             enterpriseAlias: displayName.isEmpty ? cleaned : displayName,
             displayName: displayName.isEmpty ? cleaned : displayName,
             followers: 0,
@@ -1758,6 +2358,45 @@ final class AppState: ObservableObject {
         syncCurrentUserInDirectory()
     }
 
+    func setAdAccountEnabled(_ isEnabled: Bool) {
+        currentUser.isAdAccount = isEnabled
+        syncCurrentUserInDirectory()
+    }
+
+    /// Fetches partner / branded-content flags if `UserDefaults` key `chitchat.publicAdsFlagsURL` is a full URL to `.../api/public/ads-flags`.
+    func refreshPublicAdsFlagsFromRemoteIfConfigured() {
+        Task { await refreshPublicAdsFlagsFromRemote() }
+    }
+
+    private func refreshPublicAdsFlagsFromRemote() async {
+        guard
+            let raw = UserDefaults.standard.string(forKey: "chitchat.publicAdsFlagsURL")?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+            !raw.isEmpty,
+            let url = URL(string: raw)
+        else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 15
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, (200 ... 299).contains(http.statusCode) else { return }
+            let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any]
+            guard let flags = obj?["flags"] as? [String: Any] else { return }
+            if let en = flags["nativeSponsoredFeedEnabled"] as? Bool {
+                nativeSponsoredFeedEnabled = en
+            }
+            if let lbl = flags["sponsorDisclosureLabel"] as? String {
+                let t = lbl.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !t.isEmpty {
+                    sponsorDisclosureRemoteLabel = String(t.prefix(80))
+                }
+            }
+        } catch {
+            // Keep last-known values on failure.
+        }
+    }
+
     func setEnterpriseReveal(_ isEnabled: Bool) {
         currentUser.allowEnterpriseReveal = isEnabled
         syncCurrentUserInDirectory()
@@ -1849,12 +2488,7 @@ final class AppState: ObservableObject {
         if needsApproval {
             addActivity(type: .verification, detail: "Job post submitted for approval. Business accounts require verification to publish jobs.")
         }
-        return (
-            true,
-            needsApproval
-                ? "Job post submitted for approval. You'll be notified when it's reviewed."
-                : "Contract published."
-        )
+        return (true, "Job post submitted for approval. You'll be notified when it's reviewed.")
     }
 
     func approveJobPost(contractID: UUID) {
@@ -1951,7 +2585,7 @@ final class AppState: ObservableObject {
         case .blockedNudity:
             handleBlockedNudityViolation(source: "pulse", textSnippet: text)
             return
-        case .manualReview, .accountSuspended, .missingRequiredMedia:
+        case .manualReview, .accountSuspended, .missingRequiredMedia, .sponsoredNotEligible:
             addActivity(type: .moderation, detail: "Pulse not posted — \(mod.reason)")
             return
         case .safe, .violenceNeedsConsent:
@@ -2589,6 +3223,38 @@ final class AppState: ObservableObject {
         followerHandles.remove(handle)
         enterpriseFollowingHandles.remove(handle)
         enterpriseFollowerHandles.remove(handle)
+        addActivity(
+            type: .moderation,
+            detail: "You blocked \(handle). Their posts are removed from your feed immediately. Our team reviews safety reports within 24 hours."
+        )
+        moderationEvents.insert("Block reported to safety queue: \(handle)", at: 0)
+    }
+
+    /// Report objectionable UGC (Guideline 1.2).
+    func reportUserContent(postID: UUID, authorHandle: String, reason: String) {
+        var existing: [UserContentReport] = []
+        if let data = UserDefaults.standard.data(forKey: userContentReportsStorageKey),
+           let decoded = try? JSONDecoder().decode([UserContentReport].self, from: data) {
+            existing = decoded
+        }
+        let trimmed = reason.trimmingCharacters(in: .whitespacesAndNewlines)
+        let r = UserContentReport(
+            id: UUID(),
+            postID: postID,
+            reporterHandle: currentUser.handle,
+            authorHandle: authorHandle,
+            reason: trimmed.isEmpty ? "(no details)" : trimmed,
+            createdAt: Date()
+        )
+        userContentReports = [r] + existing
+        if let data = try? JSONEncoder().encode(userContentReports) {
+            UserDefaults.standard.set(data, forKey: userContentReportsStorageKey)
+        }
+        addActivity(
+            type: .moderation,
+            detail: "Thanks — your report was sent. We review objectionable content within 24 hours."
+        )
+        moderationEvents.insert("User report: \(authorHandle) post \(postID.uuidString.prefix(8))…", at: 0)
     }
 
     func unblockHandle(_ handle: String) {
@@ -2621,6 +3287,7 @@ final class AppState: ObservableObject {
 
     func feedPosts(isFollowingOnly: Bool, sortMode: FeedSortMode = .latest) -> [PostItem] {
         let visible = posts.filter { !($0.isArchived) && canViewPost($0) }
+            .filter { !isBlocked($0.authorHandle) }
             .filter { post in
                 if mode == .social && post.authorHandle.caseInsensitiveCompare(currentUser.handle) == .orderedSame {
                     return socialProfileVisible
@@ -2638,7 +3305,10 @@ final class AppState: ObservableObject {
             if cityKey.isEmpty {
                 scoped = visible
             } else {
-                scoped = visible.filter { $0.city.caseInsensitiveCompare(cityKey) == .orderedSame }
+                scoped = visible.filter { post in
+                    post.city.caseInsensitiveCompare(cityKey) == .orderedSame
+                        || (nativeSponsoredFeedEnabled && post.isSponsoredAd)
+                }
             }
         }
         let tuned = scoped.sorted { interestMatchScore(for: $0) > interestMatchScore(for: $1) }
@@ -2649,6 +3319,7 @@ final class AppState: ObservableObject {
         let scoped = posts.filter { post in
             !post.isArchived
             && canViewPost(post)
+            && !isBlocked(post.authorHandle)
             && (closeFriendsHandles.contains(post.authorHandle) || post.authorHandle == currentUser.handle)
         }
         return sortFeed(scoped, sortMode: sortMode)
@@ -2656,10 +3327,11 @@ final class AppState: ObservableObject {
 
     private func interestMatchScore(for post: PostItem) -> Double {
         let tokens = activeInterests
-        guard !tokens.isEmpty else { return 0 }
-        let haystack = "\(post.caption) \(post.city) \(post.authorHandle) \(post.type.rawValue)".lowercased()
+        let haystack = "\(post.caption) \(post.city) \(post.authorHandle) \(post.type.rawValue) \(post.sponsorBrandHandle)".lowercased()
         let hits = tokens.filter { haystack.contains($0) }.count
-        return Double(hits) * 5.0
+        var score = Double(hits) * 5.0
+        if nativeSponsoredFeedEnabled && post.isSponsoredAd { score += 3.0 }
+        return score
     }
 
     private func sortFeed(_ items: [PostItem], sortMode: FeedSortMode) -> [PostItem] {
@@ -2695,6 +3367,23 @@ final class AppState: ObservableObject {
         likesByPost[postID, default: []].append(current)
         posts[index].likeCount = max(posts[index].likeCount + 1, likesByPost[postID]?.count ?? 0)
         addActivity(type: .like, detail: "You liked \(posts[index].authorHandle)'s post.")
+        saveEngagementState()
+    }
+
+    /// Reels / heart control: unlike if already liked, otherwise like.
+    func toggleLike(on postID: UUID) {
+        guard let index = posts.firstIndex(where: { $0.id == postID }) else { return }
+        let current = engagementUser(for: currentUser.handle)
+        var likes = likesByPost[postID, default: []]
+        if let idx = likes.firstIndex(where: { $0.handle.caseInsensitiveCompare(current.handle) == .orderedSame }) {
+            likes.remove(at: idx)
+            likesByPost[postID] = likes
+        } else {
+            likes.append(current)
+            likesByPost[postID] = likes
+            addActivity(type: .like, detail: "You liked \(posts[index].authorHandle)'s post.")
+        }
+        posts[index].likeCount = max(0, likes.count)
         saveEngagementState()
     }
 
@@ -2823,7 +3512,7 @@ final class AppState: ObservableObject {
         case .blockedNudity:
             handleBlockedNudityViolation(source: "repost", textSnippet: caption)
             return
-        case .manualReview, .accountSuspended, .missingRequiredMedia:
+        case .manualReview, .accountSuspended, .missingRequiredMedia, .sponsoredNotEligible:
             addActivity(type: .moderation, detail: "Repost not allowed — \(mod.reason)")
             return
         case .safe, .violenceNeedsConsent:
@@ -2838,10 +3527,11 @@ final class AppState: ObservableObject {
             id: UUID(),
             authorHandle: currentUser.handle,
             caption: caption,
-            type: .post,
+            type: source.type == .reel || source.type == .shortVideo ? source.type : .post,
             createdAt: Date(),
             city: localCity,
             imageData: source.imageData,
+            videoData: source.videoData,
             likeCount: 0,
             commentCount: 0,
             areLikesHidden: false,
@@ -2852,6 +3542,7 @@ final class AppState: ObservableObject {
             storyAudience: .public,
             audience: .public,
             isCollab: false,
+            surfaceStyle: source.surfaceStyle,
             taggedHandles: source.taggedHandles,
             combinedOwnerHandle: source.combinedOwnerHandle,
             violenceWarningRequired: violence
@@ -2859,6 +3550,97 @@ final class AppState: ObservableObject {
         posts.insert(reposted, at: 0)
         addActivity(type: .repost, detail: firstTimeRepost ? "Reposted \(source.authorHandle)'s post." : "Re-shared \(source.authorHandle)'s post.")
         saveEngagementState()
+    }
+
+    /// Paid reshare: same media as the source post, disclosure in caption, tap-through to the paying brand.
+    func sponsoredRepostPost(_ postID: UUID, sponsorBrandHandle rawBrand: String, sponsorExternalURL: String = "") {
+        clearExpiredPolicyBanIfNeeded()
+        if isPolicySuspendedNow {
+            addActivity(type: .moderation, detail: "Sponsored repost blocked — account suspended.")
+            return
+        }
+        guard canRunPaidAds else {
+            addActivity(
+                type: .moderation,
+                detail: "Sponsored repost blocked — enable Ad account (or business) and ensure branded promos are on for your build."
+            )
+            return
+        }
+        let brand = normalizedSponsorHandle(rawBrand)
+        guard !brand.isEmpty else {
+            addActivity(type: .moderation, detail: "Add a brand handle for sponsored reposts.")
+            return
+        }
+        guard let source = posts.first(where: { $0.id == postID }) else { return }
+        guard let sourceIndex = posts.firstIndex(where: { $0.id == postID }) else { return }
+        let current = engagementUser(for: currentUser.handle)
+        let alreadyReposted = repostsByPost[postID, default: []].contains {
+            $0.handle.caseInsensitiveCompare(current.handle) == .orderedSame
+        }
+        let firstTimeRepost = !alreadyReposted
+        let caption = """
+        Sponsored · \(brand)
+
+        Repost of \(source.authorHandle): \(source.caption)
+
+        #ad
+        """
+        let mod = ModerationService.evaluate(caption: caption, blockNudity: true)
+        switch mod.label {
+        case .blockedNudity:
+            handleBlockedNudityViolation(source: "sponsored_repost", textSnippet: caption)
+            return
+        case .manualReview, .accountSuspended, .missingRequiredMedia, .sponsoredNotEligible:
+            addActivity(type: .moderation, detail: "Sponsored repost not allowed — \(mod.reason)")
+            return
+        case .safe, .violenceNeedsConsent:
+            break
+        }
+        if firstTimeRepost {
+            repostsByPost[postID, default: []].append(current)
+            posts[sourceIndex].repostCount = max(posts[sourceIndex].repostCount + 1, repostsByPost[postID]?.count ?? 0)
+        }
+        let violence = mod.label == .violenceNeedsConsent || source.violenceWarningRequired
+        let trimmedURL = sponsorExternalURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let wrapped = PostItem(
+            id: UUID(),
+            authorHandle: currentUser.handle,
+            caption: caption,
+            type: source.type == .reel || source.type == .shortVideo ? source.type : .post,
+            createdAt: Date(),
+            city: localCity,
+            imageData: source.imageData,
+            videoData: source.videoData,
+            likeCount: 0,
+            commentCount: 0,
+            areLikesHidden: false,
+            areCommentsHidden: false,
+            isArchived: false,
+            repostCount: 0,
+            saveCount: 0,
+            storyAudience: .public,
+            audience: .public,
+            isCollab: false,
+            surfaceStyle: source.surfaceStyle,
+            taggedHandles: source.taggedHandles,
+            combinedOwnerHandle: source.combinedOwnerHandle,
+            violenceWarningRequired: violence,
+            isSponsoredAd: true,
+            sponsorBrandHandle: brand,
+            sponsorExternalURL: trimmedURL,
+            sponsoredSourcePostID: postID
+        )
+        posts.insert(wrapped, at: 0)
+        addActivity(
+            type: .repost,
+            detail: firstTimeRepost
+                ? "Sponsored repost for \(brand) · original \(source.authorHandle)."
+                : "Sponsored re-share for \(brand)."
+        )
+        saveEngagementState()
+        Task {
+            try? await backend.syncPost(wrapped)
+        }
     }
 
     func quotePost(_ postID: UUID, commentary: String, surfaceStyle: PostSurfaceStyle = .chat) {
@@ -2876,7 +3658,7 @@ final class AppState: ObservableObject {
         case .blockedNudity:
             handleBlockedNudityViolation(source: "quote", textSnippet: caption)
             return
-        case .manualReview, .accountSuspended, .missingRequiredMedia:
+        case .manualReview, .accountSuspended, .missingRequiredMedia, .sponsoredNotEligible:
             addActivity(type: .moderation, detail: "Quote not allowed — \(mod.reason)")
             return
         case .safe, .violenceNeedsConsent:
@@ -2920,7 +3702,7 @@ final class AppState: ObservableObject {
         case .blockedNudity:
             handleBlockedNudityViolation(source: "reply_post", textSnippet: caption)
             return
-        case .manualReview, .accountSuspended, .missingRequiredMedia:
+        case .manualReview, .accountSuspended, .missingRequiredMedia, .sponsoredNotEligible:
             return
         case .safe, .violenceNeedsConsent:
             break
@@ -2993,7 +3775,8 @@ final class AppState: ObservableObject {
     func monetizationInsights() -> MonetizationInsights {
         let mine = posts.filter { $0.authorHandle == currentUser.handle && !$0.isArchived }
         let sponsored = mine.filter {
-            $0.caption.localizedCaseInsensitiveContains("http://")
+            $0.isSponsoredAd
+                || $0.caption.localizedCaseInsensitiveContains("http://")
                 || $0.caption.localizedCaseInsensitiveContains("https://")
                 || $0.caption.localizedCaseInsensitiveContains("#ad")
                 || $0.caption.localizedCaseInsensitiveContains("#sponsored")
@@ -3542,21 +4325,56 @@ final class AppState: ObservableObject {
         emailVerificationSent = true
     }
 
-    func completeProviderLogin(username: String, provider: String) -> String? {
+    func completeProviderLogin(username: String, provider: String, accountEmailFromProvider: String? = nil) -> String? {
         guard let cleaned = normalizedUsername(from: username) else {
             return "Enter a valid unique username (3+ chars, letters/numbers/._)."
         }
         guard !ReservedHandles.isReserved(cleaned) else {
             return "This username is reserved."
         }
-        if let existing = internalUsers.first(where: { $0.username.caseInsensitiveCompare(cleaned) == .orderedSame }) {
-            currentUser = existing
+        let providerEmail = (accountEmailFromProvider ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+#if canImport(FirebaseAuth)
+        let firebaseUid = Auth.auth().currentUser?.uid
+#endif
+
+        if let idx = internalUsers.firstIndex(where: { $0.username.caseInsensitiveCompare(cleaned) == .orderedSame }) {
+            currentUser = internalUsers[idx]
+            if !providerEmail.isEmpty {
+                if currentUser.accountEmail.isEmpty || Self.isPlaceholderAccountEmail(currentUser.accountEmail) {
+                    currentUser.accountEmail = providerEmail
+                }
+            } else if Self.isOAuthProvider(provider), currentUser.accountEmail.isEmpty {
+                currentUser.accountEmail = Self.placeholderAccountEmail(forUsername: cleaned)
+            }
+            if Self.isOAuthProvider(provider) {
+                let digits = currentUser.accountPhone.filter(\.isNumber)
+                if digits.count < 10 {
+                    currentUser.accountPhone = Self.placeholderAccountPhoneDigits
+                }
+            }
+            syncCurrentUserInDirectory()
         } else {
             currentUser.username = cleaned
             currentUser.handle = "@\(cleaned)"
-            currentUser.displayName = cleaned
+            if currentUser.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                currentUser.displayName = cleaned
+            }
+            if !providerEmail.isEmpty {
+                currentUser.accountEmail = providerEmail
+            } else if Self.isOAuthProvider(provider) {
+                currentUser.accountEmail = Self.placeholderAccountEmail(forUsername: cleaned)
+            }
+            if Self.isOAuthProvider(provider) {
+                currentUser.accountPhone = Self.placeholderAccountPhoneDigits
+            }
             syncCurrentUserInDirectory()
         }
+#if canImport(FirebaseAuth)
+        if let firebaseUid {
+            currentUser.firebaseUserId = firebaseUid
+            firebaseSignedInUID = firebaseUid
+        }
+#endif
         registerLoggedInAccount(cleaned)
         refreshCurrentProfileMedia()
         loadSavedPosts()
@@ -3575,12 +4393,26 @@ final class AppState: ObservableObject {
         loadExecutionQueueRestorePoint()
         captureExecutionCompletionSnapshotIfNeededDaily()
         beginSession(provider: provider)
+#if canImport(FirebaseAuth) && canImport(FirebaseFirestore)
+        if Auth.auth().currentUser != nil {
+            Task {
+                await claimUsernameDocumentIfNeeded()
+                await hydrateProfileFromFirestoreForCurrentFirebaseUser()
+            }
+        }
+#endif
         return nil
     }
 
     func endSession() {
         session = nil
         UserDefaults.standard.removeObject(forKey: sessionStorageKey)
+        firebaseSignedInUID = nil
+        isInternalAdminCache = false
+#if canImport(FirebaseAuth)
+        try? Auth.auth().signOut()
+#endif
+        currentUser = Self.makeGuestUserProfile()
     }
 
     func validateBusinessRegistration(_ registration: BusinessRegistration) -> String? {
@@ -3647,106 +4479,17 @@ final class AppState: ObservableObject {
         currentUser.businessJobPostingApproved = false
     }
 
-    /// Pass `business` when signing up as a registered business (EIN + entity details). Social handles stay on `username` / `handle`.
-    func signUp(username: String, password: String, personalDisplayName: String? = nil, business: BusinessRegistration? = nil) -> String? {
-        guard let cleaned = normalizedUsername(from: username) else {
-            return "Username must be 3+ characters and only letters, numbers, . or _"
-        }
-        guard !ReservedHandles.isReserved(cleaned) else {
-            return "This username is reserved."
-        }
-        guard password.count >= 8 else {
-            return "Password must be at least 8 characters."
-        }
-        let key = cleaned.lowercased()
-        if localCredentials[key] != nil {
-            return "Username already exists."
-        }
-        if internalUsers.contains(where: { $0.username.lowercased() == key }) {
-            return "Username already exists."
-        }
-        if let registration = business {
-            if let err = validateBusinessRegistration(registration) { return err }
-        }
-        localCredentials[key] = password
-        saveCredentials()
-        currentUser.username = cleaned
-        currentUser.handle = "@\(cleaned)"
-        currentUser.verificationStatus = cleaned.lowercased() == "almighty_bruce_" ? .verifiedInternal : .unverified
-        clearBusinessRegistrationOnCurrentUser()
-        if let registration = business {
-            applyBusinessRegistration(registration)
-        } else {
-            let rawName = personalDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            if rawName.isEmpty {
-                currentUser.displayName = cleaned
-                currentUser.enterpriseAlias = cleaned
-            } else {
-                currentUser.displayName = rawName
-                currentUser.enterpriseAlias = rawName
-            }
-        }
-        registerLoggedInAccount(cleaned)
-        syncCurrentUserInDirectory()
-        refreshCurrentProfileMedia()
-        loadSavedPosts()
-        loadProfileQuoteState()
-        loadProfileModeState()
-        loadInterestState()
-        loadReelCollections()
-        loadExploreSignals()
-        loadSeenStoryHandles()
-        restoreEngagementState()
-        loadScheduledPosts()
-        loadAnalyticsSnapshots()
-        loadExecutionQueueProgress()
-        loadExecutionQueueSnapshots()
-        loadExecutionQueueSettings()
-        loadExecutionQueueRestorePoint()
-        captureExecutionCompletionSnapshotIfNeededDaily()
-        beginSession(provider: "local")
-        return nil
-    }
-
-    func logIn(username: String, password: String) -> String? {
-        guard let cleaned = normalizedUsername(from: username) else {
-            return "Invalid username."
-        }
-        let key = cleaned.lowercased()
-        guard localCredentials[key] == password else {
-            return "Incorrect username or password."
-        }
-        if let existing = internalUsers.first(where: { $0.username.lowercased() == key }) {
-            currentUser = existing
-        } else {
-            currentUser.username = cleaned
-            currentUser.handle = "@\(cleaned)"
-        }
-        registerLoggedInAccount(cleaned)
-        syncCurrentUserInDirectory()
-        refreshCurrentProfileMedia()
-        loadSavedPosts()
-        loadProfileQuoteState()
-        loadProfileModeState()
-        loadInterestState()
-        loadReelCollections()
-        loadExploreSignals()
-        loadSeenStoryHandles()
-        restoreEngagementState()
-        loadScheduledPosts()
-        loadAnalyticsSnapshots()
-        loadExecutionQueueProgress()
-        loadExecutionQueueSnapshots()
-        loadExecutionQueueSettings()
-        loadExecutionQueueRestorePoint()
-        captureExecutionCompletionSnapshotIfNeededDaily()
-        beginSession(provider: "local")
-        return nil
-    }
-
     @discardableResult
     func switchToAccount(username: String) -> Bool {
         let key = username.lowercased()
+#if canImport(FirebaseAuth)
+        if let fu = Auth.auth().currentUser {
+            guard
+                let scoped = internalUsers.first(where: { $0.username.lowercased() == key }),
+                scoped.firebaseUserId == fu.uid
+            else { return false }
+        }
+#endif
         if let existing = internalUsers.first(where: { $0.username.lowercased() == key }) {
             currentUser = existing
             registerLoggedInAccount(existing.username)
@@ -4182,6 +4925,77 @@ final class AppState: ObservableObject {
         UserDefaults.standard.set(loggedInAccountUsernames, forKey: loggedInAccountsKey)
     }
 
+    /// Strips device-only leftovers from the old hard-coded demo identity; Firebase Auth + `users/{uid}` are authoritative.
+    private func purgeLegacySeededAccountArtifacts() {
+        let doomed = Set(
+            localCredentials.keys.filter { Self.isLegacySeededUsernameKey($0) }
+                + loggedInAccountUsernames.map { $0.lowercased() }.filter { Self.isLegacySeededUsernameKey($0) }
+        )
+        guard !doomed.isEmpty else {
+            if Self.isLegacySeededUsernameKey(currentUser.username) {
+                currentUser = Self.makeGuestUserProfile()
+            }
+            if let data = UserDefaults.standard.data(forKey: sessionStorageKey),
+               let decoded = try? JSONDecoder().decode(AppSession.self, from: data),
+               Self.isLegacySeededUsernameKey(decoded.username) {
+                UserDefaults.standard.removeObject(forKey: sessionStorageKey)
+                session = nil
+            }
+            return
+        }
+        for key in doomed {
+            localCredentials.removeValue(forKey: key)
+            UserDefaults.standard.removeObject(forKey: pendingPasswordResetStorageKey(usernameKey: key))
+            UserDefaults.standard.removeObject(forKey: passwordResetUserRatePrefix + key)
+            UserDefaults.standard.removeObject(forKey: passwordResetLockPrefix + key)
+            let scopedPrefixes = [
+                profilePhotoStoragePrefix,
+                profileGifStoragePrefix,
+                profileLoopVideoStoragePrefix,
+                profileStoryImageStoragePrefix,
+                profileStoryVideoStoragePrefix,
+                profileStoryGifStoragePrefix,
+                savedPostsStoragePrefix,
+                storySeenStoragePrefix,
+                profileQuoteStoragePrefix,
+                profileQuoteVisibilityStoragePrefix,
+                profileModeStateStoragePrefix,
+                interestStateStoragePrefix,
+                reelCollectionStoragePrefix,
+                exploreSignalStoragePrefix,
+                engagementStoragePrefix,
+                superFeatureSelectionStoragePrefix,
+                executionQueueProgressStoragePrefix,
+                executionQueueSnapshotStoragePrefix,
+                executionQueueLockStoragePrefix,
+                executionQueueLastSnapshotDayStoragePrefix,
+                executionQueueRestorePointStoragePrefix,
+                scheduledPostsStoragePrefix,
+                analyticsSnapshotsStoragePrefix
+            ]
+            for prefix in scopedPrefixes {
+                UserDefaults.standard.removeObject(forKey: "\(prefix)\(key)")
+            }
+        }
+        loggedInAccountUsernames.removeAll { Self.isLegacySeededUsernameKey($0) }
+        saveCredentials()
+        saveLoggedInAccounts()
+        if let data = UserDefaults.standard.data(forKey: sessionStorageKey),
+           let decoded = try? JSONDecoder().decode(AppSession.self, from: data),
+           Self.isLegacySeededUsernameKey(decoded.username) {
+            UserDefaults.standard.removeObject(forKey: sessionStorageKey)
+            session = nil
+        }
+        if Self.isLegacySeededUsernameKey(currentUser.username) {
+            currentUser = Self.makeGuestUserProfile()
+        }
+    }
+
+    private static func isLegacySeededUsernameKey(_ raw: String) -> Bool {
+        let k = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return k.contains("almighty_bruce") || k == "almightybruce_"
+    }
+
     private func loadRecentSearches() {
         guard let stored = UserDefaults.standard.array(forKey: recentSearchesStorageKey) as? [String] else {
             recentSearches = []
@@ -4497,7 +5311,7 @@ final class AppState: ObservableObject {
         UserDefaults.standard.set(key, forKey: executionQueueLastSnapshotDayStorageKey)
     }
 
-    private func beginSession(provider: String) {
+    func beginSession(provider: String) {
         let now = Date()
         session = AppSession(
             username: currentUser.username,
@@ -4513,6 +5327,13 @@ final class AppState: ObservableObject {
     }
 
     private func restoreSession() {
+#if canImport(FirebaseAuth)
+        if Auth.auth().currentUser == nil {
+            UserDefaults.standard.removeObject(forKey: sessionStorageKey)
+            session = nil
+            return
+        }
+#endif
         guard
             let data = UserDefaults.standard.data(forKey: sessionStorageKey),
             let decoded = try? JSONDecoder().decode(AppSession.self, from: data),
@@ -4616,6 +5437,270 @@ final class AppState: ObservableObject {
         return hour >= quietHoursStart || hour < quietHoursEnd
     }
 }
+
+#if canImport(FirebaseAuth) && canImport(FirebaseFirestore)
+import FirebaseAuth
+import FirebaseFirestore
+#if canImport(FirebaseCore)
+import FirebaseCore
+#endif
+
+extension AppState {
+    func installFirebaseAuthBridge() {
+        #if canImport(FirebaseCore)
+        guard FirebaseApp.app() != nil else { return }
+        #endif
+        firebaseSignedInUID = Auth.auth().currentUser?.uid
+        _ = Auth.auth().addStateDidChangeListener { [weak self] _, user in
+            guard let self else { return }
+            Task { @MainActor in
+                self.handleFirebaseAuthStateChange(user)
+            }
+        }
+        reconcileFirebaseOnColdLaunch()
+    }
+
+    private func handleFirebaseAuthStateChange(_ user: User?) {
+        if user != nil {
+            firebaseSignedInUID = user?.uid
+            Task { await refreshInternalAdminAccess() }
+        } else {
+            firebaseSignedInUID = nil
+            isInternalAdminCache = false
+            session = nil
+            UserDefaults.standard.removeObject(forKey: AppState.sessionUserDefaultsKey)
+            currentUser = AppState.makeGuestUserProfile()
+        }
+    }
+
+    private func reconcileFirebaseOnColdLaunch() {
+        guard Auth.auth().currentUser != nil else {
+            firebaseSignedInUID = nil
+            return
+        }
+        firebaseSignedInUID = Auth.auth().currentUser?.uid
+        Task {
+            await hydrateProfileFromFirestoreForCurrentFirebaseUser()
+            await refreshInternalAdminAccess()
+        }
+    }
+
+    func hydrateProfileFromFirestoreForCurrentFirebaseUser() async {
+        guard let user = Auth.auth().currentUser else { return }
+        let uid = user.uid
+        let ref = Firestore.firestore().collection(ChitChatFirestoreSchema.Collection.users).document(uid)
+        let snap: DocumentSnapshot?
+        do {
+            snap = try await ref.getDocument()
+        } catch {
+            snap = nil
+        }
+        if let snap, snap.exists, let data = snap.data() {
+            currentUser = userProfileFromChitChatFirestoreData(data, uid: uid)
+            syncCurrentUserInDirectory()
+            runPostLoginAccountDataReload()
+            let provider = user.providerData.first?.providerID ?? "firebase"
+            beginSession(provider: provider)
+            pushChitChatUserDirectoryIfFirebaseSignedIn()
+            return
+        }
+        if currentUser.username.lowercased() == "guest" {
+            scaffoldCurrentUserFromFirebaseAuth(user: user)
+        }
+        syncCurrentUserInDirectory()
+        runPostLoginAccountDataReload()
+        if session?.isAuthenticated != true {
+            beginSession(provider: user.providerData.first?.providerID ?? "firebase")
+        }
+        pushChitChatUserDirectoryIfFirebaseSignedIn()
+    }
+
+    private func scaffoldCurrentUserFromFirebaseAuth(user: User) {
+        let email = user.email ?? ""
+        let rawBase: String
+        if let s = email.split(separator: "@").first, !s.isEmpty {
+            rawBase = String(s)
+        } else {
+            rawBase = "user_\(user.uid.prefix(6))"
+        }
+        let cleaned = rawBase.filter { $0.isLetter || $0.isNumber || $0 == "_" || $0 == "." }
+        let unameRaw = cleaned.isEmpty ? "user_\(String(user.uid.prefix(8)))" : String(cleaned.prefix(30))
+        let uname = unameRaw.lowercased()
+        currentUser.username = uname
+        currentUser.handle = "@\(uname)"
+        currentUser.displayName = user.displayName ?? uname
+        currentUser.enterpriseAlias = currentUser.displayName
+        currentUser.accountEmail = email
+        currentUser.accountPhone = Self.placeholderAccountPhoneDigits
+        currentUser.followers = 0
+        currentUser.verificationStatus = .unverified
+        currentUser.firebaseUserId = user.uid
+        if Self.isOAuthProvider(user.providerData.first?.providerID ?? ""), email.isEmpty {
+            currentUser.accountEmail = Self.placeholderAccountEmail(forUsername: uname)
+        }
+    }
+
+    func claimUsernameDocumentIfNeeded() async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        let key = currentUser.username.lowercased()
+        guard !key.isEmpty, key != "guest" else { return }
+        let db = Firestore.firestore()
+        let ref = db.collection(ChitChatFirestoreSchema.Collection.usernames).document(key)
+        do {
+            let snap = try await ref.getDocument()
+            if snap.exists {
+                if let existing = snap.data()?["uid"] as? String, existing == uid { return }
+                return
+            }
+            try await ref.setData(["uid": uid])
+        } catch {
+            // ignore
+        }
+    }
+
+    func refreshInternalAdminAccess() async {
+        guard let uid = Auth.auth().currentUser?.uid else {
+            isInternalAdminCache = false
+            return
+        }
+        let ref = Firestore.firestore().collection(ChitChatFirestoreSchema.Collection.adminUsers).document(uid)
+        do {
+            let snap = try await ref.getDocument()
+            isInternalAdminCache = snap.exists
+        } catch {
+            isInternalAdminCache = false
+        }
+    }
+
+    func signUpWithFirebase(
+        username: String,
+        password: String,
+        accountEmail: String,
+        accountPhone: String,
+        personalDisplayName: String?,
+        business: BusinessRegistration?
+    ) async -> String? {
+        guard let cleaned = normalizedUsername(from: username) else {
+            return "Username must be 3+ characters and only letters, numbers, . or _"
+        }
+        guard cleaned.lowercased() != "guest" else { return "That username is reserved." }
+        guard !ReservedHandles.isReserved(cleaned) else {
+            return "This username is reserved."
+        }
+        guard password.count >= 8 else {
+            return "Password must be at least 8 characters."
+        }
+        let trimmedEmail = accountEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let err = validateAccountEmail(trimmedEmail) { return err }
+        if business == nil {
+            let p = accountPhone.filter(\.isNumber)
+            if !p.isEmpty, p.count < 10 { return "Phone number must include at least 10 digits if provided." }
+            if !p.isEmpty, p == Self.placeholderAccountPhoneDigits { return "Enter a real phone number (not placeholder digits)." }
+        }
+        let key = cleaned.lowercased()
+        if internalUsers.contains(where: { $0.username.lowercased() == key }) {
+            return "Username already exists."
+        }
+        if let registration = business {
+            if let err = validateBusinessRegistration(registration) { return err }
+        }
+
+        let db = Firestore.firestore()
+        let unameRef = db.collection(ChitChatFirestoreSchema.Collection.usernames).document(key)
+        do {
+            let preSnap = try await unameRef.getDocument()
+            if preSnap.exists {
+                return "Username already taken."
+            }
+        } catch {
+            return "Could not verify username. Check your connection and try again."
+        }
+
+        do {
+            let authResult = try await Auth.auth().createUser(withEmail: trimmedEmail, password: password)
+            let uid = authResult.user.uid
+            do {
+                try await unameRef.setData(["uid": uid])
+            } catch {
+                try? await authResult.user.delete()
+                return "Could not reserve username. Try a different one."
+            }
+
+            clearBusinessRegistrationOnCurrentUser()
+            var base = UserProfile(
+                id: UUID(),
+                username: cleaned,
+                handle: "@\(cleaned)",
+                accountEmail: trimmedEmail,
+                accountPhone: "",
+                enterpriseAlias: cleaned,
+                displayName: cleaned,
+                followers: 0,
+                verificationStatus: .unverified,
+                allowEnterpriseReveal: false,
+                linkedPlatforms: []
+            )
+            base.firebaseUserId = uid
+            currentUser = base
+
+            if let registration = business {
+                applyBusinessRegistration(registration)
+                currentUser.username = cleaned
+                currentUser.handle = "@\(cleaned)"
+                currentUser.accountEmail = trimmedEmail
+                currentUser.firebaseUserId = uid
+                currentUser.accountPhone = registration.phone.filter(\.isNumber)
+                guard currentUser.accountPhone.count >= 10 else {
+                    try? await authResult.user.delete()
+                    try? await unameRef.delete()
+                    return "Enter a valid business phone (10+ digits)."
+                }
+                guard currentUser.accountPhone != Self.placeholderAccountPhoneDigits else {
+                    try? await authResult.user.delete()
+                    try? await unameRef.delete()
+                    return "Enter a real business phone number."
+                }
+            } else {
+                let rawName = personalDisplayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if rawName.isEmpty {
+                    currentUser.displayName = cleaned
+                    currentUser.enterpriseAlias = cleaned
+                } else {
+                    currentUser.displayName = rawName
+                    currentUser.enterpriseAlias = rawName
+                }
+                let phoneDigits = accountPhone.filter(\.isNumber)
+                currentUser.accountPhone = phoneDigits.isEmpty ? Self.placeholderAccountPhoneDigits : phoneDigits
+            }
+            registerLoggedInAccount(cleaned)
+            syncCurrentUserInDirectory()
+            pushChitChatUserDirectoryIfFirebaseSignedIn()
+            runPostLoginAccountDataReload()
+            beginSession(provider: "password")
+            firebaseSignedInUID = uid
+            await refreshInternalAdminAccess()
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    func logInWithFirebase(email: String, password: String) async -> String? {
+        let em = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let err = validateAccountEmail(em) { return err }
+        do {
+            let r = try await Auth.auth().signIn(withEmail: em, password: password)
+            firebaseSignedInUID = r.user.uid
+            await hydrateProfileFromFirestoreForCurrentFirebaseUser()
+            await refreshInternalAdminAccess()
+            registerLoggedInAccount(currentUser.username)
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+}
+#endif
 
 struct CreatorInsights {
     var totalPosts: Int

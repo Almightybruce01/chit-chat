@@ -1,0 +1,36 @@
+# Publishes deploy-support/index.html to GitHub Pages.
+# After push: Repo → Settings → Pages → Build and deployment → Source: GitHub Actions.
+# Your Support URL: https://<your-username>.github.io/<repo-name>/
+
+name: Deploy support site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'deploy-support/**'
+      - '.github/workflows/deploy-support-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-support-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: deploy-support
+      - id: deployment
+        uses: actions/deploy-pages@v4
