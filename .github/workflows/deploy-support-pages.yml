@@ -1,6 +1,7 @@
-# Chit Chat Social — publishes deploy-support/index.html to GitHub Pages.
-# After push: repo Settings → Pages → Build and deployment → Source: GitHub Actions.
-# Example Support URL (current repo slug): https://almightybruce01.github.io/chit-chat/
+# Chit Chat Social — builds a full Pages tree: docs root redirect + ai-company + /support/.
+# Settings → Pages → Source: GitHub Actions. First run may need approval: Settings → Environments → github-pages.
+# Support URL for App Store: https://almightybruce01.github.io/chit-chat/support/
+# Root still redirects as in docs/index.html.
 
 name: Deploy support site
 
@@ -9,6 +10,9 @@ on:
     branches: [main]
     paths:
       - 'deploy-support/**'
+      - 'docs/index.html'
+      - 'docs/ai-company/**'
+      - 'docs/support/**'
       - '.github/workflows/deploy-support-pages.yml'
   workflow_dispatch:
 
@@ -29,8 +33,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Assemble Pages site (_site)
+        run: |
+          set -e
+          mkdir -p _site/support
+          cp docs/index.html _site/
+          cp -r docs/ai-company _site/ai-company
+          cp deploy-support/index.html _site/support/index.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: deploy-support
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

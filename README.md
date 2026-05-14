@@ -6,7 +6,7 @@
 
 **Private UI:** Cloudflare Worker + **Workers KV** only (no report JSON in this public repo). See [`docs/PRIVATE_DASHBOARD_SETUP.md`](docs/PRIVATE_DASHBOARD_SETUP.md) and [`ops/daily_company/dashboard-worker/`](ops/daily_company/dashboard-worker/). **Local:** `ops/daily_company/dashboard/` + `python3 -m http.server` after `./scripts/bootstrap-ai-company.sh`.
 
-Repo folder for Pages: [`docs/ai-company/`](docs/ai-company/). Enable **Settings → Pages → `/docs` on `main`** if you see a 404. Canonical reference: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
+Repo folder for Pages: [`docs/ai-company/`](docs/ai-company/). Support page duplicate: [`docs/support/`](docs/support/) (`deploy-support/` + Actions build). **App Store Support URL:** `https://almightybruce01.github.io/chit-chat/support/` once Pages is deployed. Enable **Settings → Pages → `/docs` on `main`** for branch builds, **or Source: GitHub Actions** for the workflow; first Actions deploy may require approving the **`github-pages`** environment. Canonical: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
 
 ---
 
