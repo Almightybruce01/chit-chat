@@ -1,7 +1,7 @@
-# Chit Chat Social — builds a full Pages tree: docs root redirect + ai-company + /support/.
-# Settings → Pages → Source: GitHub Actions. First run may need approval: Settings → Environments → github-pages.
-# Support URL for App Store: https://almightybruce01.github.io/chit-chat/support/
-# Root still redirects as in docs/index.html.
+# Chit Chat Social — builds _site: hub root + /support/ + /ai-company/.
+# Settings → Pages → Source: GitHub Actions. Approve Environment "github-pages" if pending.
+# App Store Support URL: https://almightybruce01.github.io/chit-chat/support/
+# Custom domain (optional): add CNAME in deploy-support/ (see CNAME.example), then GitHub → Pages → Custom domain.
 
 name: Deploy support site
 
@@ -10,7 +10,6 @@ on:
     branches: [main]
     paths:
       - 'deploy-support/**'
-      - 'docs/index.html'
       - 'docs/ai-company/**'
       - 'docs/support/**'
       - '.github/workflows/deploy-support-pages.yml'
@@ -37,9 +36,10 @@ jobs:
         run: |
           set -e
           mkdir -p _site/support
-          cp docs/index.html _site/
+          cp deploy-support/github-pages-root.html _site/index.html
           cp -r docs/ai-company _site/ai-company
           cp deploy-support/index.html _site/support/index.html
+          if [ -f deploy-support/CNAME ]; then cp deploy-support/CNAME _site/CNAME; fi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

@@ -2,7 +2,7 @@
 
 ## Live dashboard
 
-**GitHub Pages (public landing only):** [https://almightybruce01.github.io/chit-chat/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) — stub + instructions; report JSON is not published there.
+**GitHub Pages (public landing only):** [https://almightybruce01.github.io/chit-chat/](https://almightybruce01.github.io/chit-chat/) (hub → **[/support/](https://almightybruce01.github.io/chit-chat/support/)** + [/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) stub). Report JSON is not published there.
 
 **Private UI:** Cloudflare Worker + **Workers KV** only (no report JSON in this public repo). See [`docs/PRIVATE_DASHBOARD_SETUP.md`](docs/PRIVATE_DASHBOARD_SETUP.md) and [`ops/daily_company/dashboard-worker/`](ops/daily_company/dashboard-worker/). **Local:** `ops/daily_company/dashboard/` + `python3 -m http.server` after `./scripts/bootstrap-ai-company.sh`.
 
