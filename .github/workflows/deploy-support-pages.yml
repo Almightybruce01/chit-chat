@@ -1,7 +1,6 @@
 # Chit Chat Social — builds _site: hub root + /support/ + /ai-company/.
-# Settings → Pages → Source: GitHub Actions. Approve Environment "github-pages" if pending.
-# App Store Support URL: https://almightybruce01.github.io/chit-chat/support/
-# Custom domain (optional): add CNAME in deploy-support/ (see CNAME.example), then GitHub → Pages → Custom domain.
+# Settings → Pages → Source: GitHub Actions. Custom domain file: deploy-support/CNAME → copied to site root.
+# App Store Support URL (after DNS): https://www.chitchatsocials.com/support/
 
 name: Deploy support site
 

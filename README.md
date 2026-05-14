@@ -2,11 +2,11 @@
 
 ## Live dashboard
 
-**GitHub Pages (public landing only):** [https://almightybruce01.github.io/chit-chat/](https://almightybruce01.github.io/chit-chat/) (hub → **[/support/](https://almightybruce01.github.io/chit-chat/support/)** + [/ai-company/](https://almightybruce01.github.io/chit-chat/ai-company/) stub). Report JSON is not published there.
+**Public site (`www`):** hub [https://www.chitchatsocials.com/](https://www.chitchatsocials.com/) → [/support/](https://www.chitchatsocials.com/support/) (App&nbsp;Store &amp; help) · [/ai-company/](https://www.chitchatsocials.com/ai-company/) landing. DNS (**Namecheap**): point **`www`** → CNAME **`almightybruce01.github.io`** and apex **`@`** → four GitHub **A** records (below); then GitHub repo **Pages** → Custom domain **`www.chitchatsocials.com`** + **`chitchatsocials.com`** and **Enforce HTTPS**. Hosted from this repo (Actions artifact + `deploy-support/CNAME`).
 
 **Private UI:** Cloudflare Worker + **Workers KV** only (no report JSON in this public repo). See [`docs/PRIVATE_DASHBOARD_SETUP.md`](docs/PRIVATE_DASHBOARD_SETUP.md) and [`ops/daily_company/dashboard-worker/`](ops/daily_company/dashboard-worker/). **Local:** `ops/daily_company/dashboard/` + `python3 -m http.server` after `./scripts/bootstrap-ai-company.sh`.
 
-Repo folder for Pages: [`docs/ai-company/`](docs/ai-company/). Support page duplicate: [`docs/support/`](docs/support/) (`deploy-support/` + Actions build). **App Store Support URL:** `https://almightybruce01.github.io/chit-chat/support/` once Pages is deployed. Enable **Settings → Pages → `/docs` on `main`** for branch builds, **or Source: GitHub Actions** for the workflow; first Actions deploy may require approving the **`github-pages`** environment. Canonical: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
+**Namecheap apex `A` @ host `Record`:** `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`. **CNAME:** Host **`www`** → **`almightybruce01.github.io`**. Repo paths: [`docs/ai-company/`](docs/ai-company/) · duplicate support [`docs/support/`](docs/support/). **`deploy-support/CNAME`** is `www.chitchatsocials.com`. Use **Pages → Source: GitHub Actions**. Canonical docs: [`docs/LIVE_DASHBOARD.md`](docs/LIVE_DASHBOARD.md).
 
 ---
 
