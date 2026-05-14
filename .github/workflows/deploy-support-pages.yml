@@ -1,6 +1,7 @@
 # Chit Chat Social — builds _site: hub root + /support/ + /ai-company/.
-# Settings → Pages → Source: GitHub Actions. Custom domain file: deploy-support/CNAME → copied to site root.
-# App Store Support URL (after DNS): https://www.chitchatsocials.com/support/
+# Pages → Source: GitHub Actions. Copy deploy-support/CNAME to site root. Also add SAME hostnames under Pages Custom domain (DNS alone → GitHub 404).
+# Remove stale domains (e.g. investli.org) — they can redirect github.io URLs to broken hosts.
+# App Store URLs: Marketing https://www.chitchatsocials.com/  Support https://www.chitchatsocials.com/support/
 
 name: Deploy support site
 
