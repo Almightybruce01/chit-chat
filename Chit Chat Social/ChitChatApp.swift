@@ -45,7 +45,12 @@ struct ChitChatApp: App {
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        FirebaseApp.configure()
+        // Configure Firebase only when the plist is bundled (avoids startup hangs/crashes on misconfigured archives).
+        if Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil {
+            // Skip Firebase Analytics / measurement by default.
+            UserDefaults.standard.set(false, forKey: "FIREBASE_ANALYTICS_COLLECTION_ENABLED")
+            FirebaseApp.configure()
+        }
         styleGlobalAppearance()
         return true
     }

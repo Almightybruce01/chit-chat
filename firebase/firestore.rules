@@ -1,9 +1,25 @@
 rules_version = '2';
+// Data model: firebase/FIRESTORE_DATA_MODEL.md
+// Collections: users/{uid}, usernames/{lowercase}, admin_users/{uid}, _opsAuthRate/{id}
 service cloud.firestore {
   match /databases/{database}/documents {
     // Chit Chat Social — each signed-in user may create/merge their own profile doc (Worker admin uses service account).
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // Username → Firebase UID (client may create own mapping only).
+    match /usernames/{uname} {
+      allow get: if true;
+      allow list: if false;
+      allow create: if request.auth != null
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+    // Self-read only; grant admin in Firebase Console (manual doc per UID).
+    match /admin_users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
     }
     // Ops failed-auth counters — Worker / service account only (no client access).
     match /_opsAuthRate/{doc} {

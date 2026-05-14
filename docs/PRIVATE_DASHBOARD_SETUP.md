@@ -23,6 +23,7 @@ Goal: **no report JSON in the public GitHub repo** and **no public raw GitHub UR
 | Ops PIN | Worker secret `OPS_DASHBOARD_PIN` or `DASHBOARD_PASSWORD` |
 | Session HMAC | Worker secret `SESSION_SECRET` |
 | Report JSON | KV keys `latest-report`, `history-export` |
+| Ads / AdSense program JSON (optional) | KV key `ads-program-config` — edit in dashboard **Ads & AdSense** or `GET`/`POST` `/api/ops/ads-config` |
 | User pool | Firestore `users/{uid}` + Worker `FIREBASE_SERVICE_ACCOUNT_JSON` |
 | Public Pages | Stub: `docs/ai-company/index.html` |
 | Local UI | `ops/daily_company/dashboard/` + `python3 -m http.server` after bootstrap |

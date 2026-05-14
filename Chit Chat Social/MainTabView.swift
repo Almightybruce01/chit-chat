@@ -165,12 +165,53 @@ struct MainTabView: View {
                 .transition(.opacity)
                 .zIndex(999)
         }
+        if let sec = appState.liveGoLiveCountdown {
+            ZStack {
+                Color.black.opacity(0.62).ignoresSafeArea()
+                VStack(spacing: 22) {
+                    Text("\(sec)")
+                        .font(.system(size: 92, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText())
+                        .animation(.snappy(duration: 0.18), value: sec)
+                    Text("Going live")
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                    Button("Cancel") {
+                        appState.cancelLiveCountdown()
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.white)
+                }
+                .padding(36)
+            }
+            .zIndex(1000)
+            .transition(.opacity)
+        }
+        }
+        .sheet(isPresented: Binding(
+            get: { appState.liveSheetHost != nil },
+            set: { if !$0 { appState.dismissLiveRoom() } }
+        )) {
+            NavigationStack {
+                if let host = appState.liveSheetHost {
+                    LiveBroadcastViewerSheet(hostHandle: host)
+                        .environmentObject(appState)
+                } else {
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                }
+            }
         }
         .onAppear {
             appState.clearExpiredPolicyBanIfNeeded()
             guard !hasRequestedCorePermissions else { return }
             permissionManager.requestAllPermissions()
             hasRequestedCorePermissions = true
+        }
+        .task {
+            appState.refreshPublicAdsFlagsFromRemoteIfConfigured()
         }
         .onChange(of: appState.mode) { _, _ in
             withAnimation(MotionTokens.spring) {
@@ -236,8 +277,15 @@ struct MainTabView: View {
             selectedTab = 4
         } label: {
             VStack(spacing: 4) {
-                profileTabIcon
-                    .frame(width: 22, height: 22)
+                ZStack(alignment: .topTrailing) {
+                    profileTabIcon
+                        .frame(width: 22, height: 22)
+                    if appState.isLiveNow {
+                        LiveStoryBadge()
+                            .scaleEffect(0.42)
+                            .offset(x: 14, y: -8)
+                    }
+                }
                 Text(appState.mode == .enterprise ? "Executive" : "Profile")
                     .font(.caption2)
             }

@@ -9,8 +9,8 @@
 /* Begin PBXBuildFile section */
 		B7B5982A2E0B945A005FEA70 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = B7B598292E0B945A005FEA70 /* FirebaseAuth */; };
 		B7B5982C2E0B945A005FEA70 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = B7B5982B2E0B945A005FEA70 /* FirebaseCore */; };
-		B7B5984A2E0B945A005FEA70 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B7B598492E0B945A005FEA70 /* FirebaseFirestore */; };
 		B7B5983D2E0CDC45005FEA70 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = B7B5983C2E0CDC45005FEA70 /* GoogleSignIn */; };
+		B7B5984A2E0B945A005FEA70 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = B7B598492E0B945A005FEA70 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -447,6 +447,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Chit Chat Social";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is used for creating posts, reels, and live content.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Contacts are used to help you find people you know on Chit Chat Social.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used to personalize your local feed and nearby discovery.";
@@ -483,6 +484,7 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Chit Chat Social";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is used for creating posts, reels, and live content.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "Contacts are used to help you find people you know on Chit Chat Social.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Location is used to personalize your local feed and nearby discovery.";
@@ -649,15 +651,15 @@
 			package = B7B598222E0B945A005FEA70 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
 		};
-		B7B598492E0B945A005FEA70 /* FirebaseFirestore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = B7B598222E0B945A005FEA70 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseFirestore;
-		};
 		B7B5983C2E0CDC45005FEA70 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B7B5983B2E0CDC45005FEA70 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
+		};
+		B7B598492E0B945A005FEA70 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B7B598222E0B945A005FEA70 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

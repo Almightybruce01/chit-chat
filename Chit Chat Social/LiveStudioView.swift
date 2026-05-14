@@ -3,7 +3,6 @@ import SwiftUI
 struct LiveStudioView: View {
     @EnvironmentObject private var appState: AppState
     @State private var activeDJ = "@brian"
-    @State private var isLive = false
     @State private var coHostDraft = ""
     @State private var audienceHandleDraft = ""
     @State private var audienceRole: SocialLiveAudienceRole = .viewer
@@ -16,11 +15,11 @@ struct LiveStudioView: View {
                     HStack {
                         Text("Status")
                         Spacer()
-                        Text(isLive ? "LIVE" : "Offline")
+                        Text(appState.isLiveNow ? "LIVE" : "Offline")
                             .font(.caption.bold())
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(isLive ? Color.red.opacity(0.85) : Color.gray.opacity(0.7))
+                            .background(appState.isLiveNow ? Color.red.opacity(0.85) : Color.gray.opacity(0.7))
                             .clipShape(Capsule())
                             .foregroundStyle(.white)
                     }
@@ -49,11 +48,15 @@ struct LiveStudioView: View {
                         }
                     }
                     .buttonStyle(.bordered)
-                    Button(isLive ? "End Live" : "Go Live Now") {
-                        isLive.toggle()
+                    Button(appState.isLiveNow ? "End Live" : "Go Live Now") {
+                        if appState.isLiveNow {
+                            appState.endLiveSession()
+                        } else {
+                            appState.scheduleStartLiveSession(headline: "Live Studio DJ")
+                        }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(isLive ? .red : BrandPalette.neonGreen)
+                    .tint(appState.isLiveNow ? .red : BrandPalette.neonGreen)
                 }
 
                 Section("Co-Hosts") {

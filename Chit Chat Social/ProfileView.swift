@@ -12,6 +12,7 @@ import AVKit
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.openURL) private var openURL
     @State private var selectedTab = "Chit"
     @State private var showBadgeInfo = false
     @State private var showAccountTools = false
@@ -40,6 +41,10 @@ struct ProfileView: View {
     @State private var showIdentityEditor = false
     @State private var profileLinkDraft = ""
     @State private var showVideoBubbleDialog = false
+    @State private var showContactInfoSheet = false
+    @State private var contactEmailDraft = ""
+    @State private var contactPhoneDraft = ""
+    @State private var contactInfoMessage = ""
     private let tabs = ["Chit", "Chat", "Reposts", "Combined", "Reels", "Tagged"]
     private var primaryText: Color { BrandPalette.adaptiveTextPrimary(for: colorScheme) }
     private var secondaryText: Color { BrandPalette.adaptiveTextSecondary(for: colorScheme) }
@@ -49,384 +54,11 @@ struct ProfileView: View {
             ZStack {
                 EliteBackground()
                 ScrollView {
-                VStack(spacing: 12) {
-                    profileHeroCard
-                    if appState.shouldShowProfileQuoteBubble {
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: "bubble.left.fill")
-                                .foregroundStyle(BrandPalette.neonBlue)
-                            Text(appState.currentUser.profileQuote)
-                                .font(.subheadline)
-                                .foregroundStyle(primaryText)
-                            Spacer()
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.92))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: 1)
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal)
-                    }
-                    VStack(spacing: 8) {
-                        Toggle("Show profile quote bubble", isOn: Binding(
-                            get: { appState.currentUser.isProfileQuoteVisible },
-                            set: { appState.setProfileQuoteVisibility($0) }
-                        ))
-                        .foregroundStyle(primaryText)
-                        .padding(.horizontal)
-                        Button(showQuoteEditor ? "Save quote" : "Edit quote bubble") {
-                            if showQuoteEditor {
-                                if appState.setProfileQuote(quoteDraft) {
-                                    profileQuoteModerationMessage = ""
-                                    showQuoteEditor.toggle()
-                                } else {
-                                    profileQuoteModerationMessage = "Quote blocked by safety checks. Check Activity for details."
-                                }
-                            } else {
-                                quoteDraft = appState.currentUser.profileQuote
-                                showQuoteEditor.toggle()
-                            }
-                        }
-                        .buttonStyle(.bordered)
-                        Button("Delete quote", role: .destructive) {
-                            quoteDraft = ""
-                            appState.setProfileQuote("")
-                            appState.setProfileQuoteVisibility(false)
-                        }
-                        .buttonStyle(.bordered)
-                        if showQuoteEditor {
-                            TextField("Write your quote (if empty, bubble is hidden)", text: $quoteDraft, axis: .vertical)
-                                .lineLimit(2...5)
-                                .textFieldStyle(EliteTextFieldStyle())
-                                .padding(.horizontal)
-                        }
-                        if !profileQuoteModerationMessage.isEmpty {
-                            Text(profileQuoteModerationMessage)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(Color.orange)
-                                .multilineTextAlignment(.center)
-                                .padding(.horizontal)
-                        }
-                    }
-                    if !conversionStatusMessage.isEmpty {
-                        Text(conversionStatusMessage)
-                            .font(.caption)
-                            .foregroundStyle(secondaryText)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal)
-                    }
-                    if appState.canUndoPostDeletion {
-                        HStack(spacing: 8) {
-                            Label("Post deleted", systemImage: "trash")
-                                .font(.caption)
-                                .foregroundStyle(secondaryText)
-                            Spacer()
-                            Button("Undo") {
-                                _ = appState.undoLastDeletedPost()
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                        .padding(.horizontal)
-                    }
-
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(tabs, id: \.self) { tab in
-                                Button(tab) {
-                                    withAnimation(MotionTokens.spring) {
-                                        selectedTab = tab
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                                .font(.caption.bold())
-                                .padding(.horizontal, 11)
-                                .padding(.vertical, 7)
-                                .background(
-                                    Capsule()
-                                        .fill(selectedTab == tab ? BrandPalette.neonBlue.opacity(0.28) : BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.86))
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme).opacity(selectedTab == tab ? 0.8 : 0.5), lineWidth: 1)
-                                )
-                                .foregroundStyle(primaryText)
-                            }
-                        }
-                        .padding(.horizontal)
-                    }
-
-                    HStack {
-                        Spacer()
-                        statChip(title: "Posts", value: "\(appState.posts.count)")
-                        Spacer()
-                    }
-                    .padding(.top, 6)
-
-                    HStack(spacing: 8) {
-                        quickActionButton("Edit profile", system: "square.and.pencil") {
-                            showIdentityEditor = true
-                            showQuoteEditor = true
-                        }
-                        quickActionButton("Share profile", system: "square.and.arrow.up") {
-                            conversionStatusMessage = "Profile share card prepared. Use your native share flow from this screen."
-                        }
-                        quickActionButton("Dashboard", system: "chart.xyaxis.line") {
-                            showInsights = true
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    storyBubbleSections
-
-                    EliteSectionCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Profile Modes")
-                                    .font(.headline)
-                                    .foregroundStyle(primaryText)
-                                Spacer()
-                                Text(appState.mode == .social ? "Social Active" : "Corporate Active")
-                                    .font(.caption2.bold())
-                                    .foregroundStyle(BrandPalette.neonGreen)
-                            }
-                            HStack(spacing: 8) {
-                                Button("Social") {
-                                    appState.setMode(.social)
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .disabled(!appState.hasSocialProfile)
-                                Button("Corporate") {
-                                    appState.setMode(.enterprise)
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .disabled(!appState.hasCorporateProfile)
-                            }
-                            Text("Social: \(appState.profileAvailabilityLabel(.social)) • Corporate: \(appState.profileAvailabilityLabel(.enterprise))")
-                                .font(.caption2)
-                                .foregroundStyle(secondaryText)
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    EliteSectionCard {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Identity")
-                                    .font(.headline)
-                                    .foregroundStyle(primaryText)
-                                Spacer()
-                                Button(showIdentityEditor ? "Save" : "Edit") {
-                                    if showIdentityEditor {
-                                        appState.updateCurrentIdentity(
-                                            enterpriseAlias: aliasDraft,
-                                            displayName: displayNameDraft
-                                        )
-                                    }
-                                    showIdentityEditor.toggle()
-                                }
-                                .buttonStyle(.bordered)
-                            }
-                            if showIdentityEditor {
-                                TextField("Corporate alias", text: $aliasDraft)
-                                    .textFieldStyle(EliteTextFieldStyle())
-                                TextField("Display name", text: $displayNameDraft)
-                                    .textFieldStyle(EliteTextFieldStyle())
-                                TextField("Profile link (https://...)", text: $profileLinkDraft)
-                                    .textFieldStyle(EliteTextFieldStyle())
-                                HStack(spacing: 8) {
-                                    Button("Save profile link") {
-                                        appState.setProfileLink(profileLinkDraft)
-                                    }
-                                    .buttonStyle(.borderedProminent)
-                                    Button("Delete link", role: .destructive) {
-                                        profileLinkDraft = ""
-                                        appState.setProfileLink("")
-                                    }
-                                    .buttonStyle(.bordered)
-                                }
-                            } else {
-                                Text("Alias: \(appState.currentUser.enterpriseAlias)")
-                                    .font(.caption)
-                                    .foregroundStyle(secondaryText)
-                                Text("Display: \(appState.currentUser.displayName)")
-                                    .font(.caption)
-                                    .foregroundStyle(secondaryText)
-                                if !appState.currentUser.profileLinkURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                                   let url = URL(string: appState.currentUser.profileLinkURL) {
-                                    Link(destination: url) {
-                                        Label(appState.currentUser.profileLinkURL, systemImage: "link")
-                                            .font(.caption)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-
-                    NavigationLink(destination: ConnectionsView().environmentObject(appState)) {
-                        Label("Followers, following, suggested, contacts", systemImage: "person.2.fill")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .padding(.horizontal)
-
-                    if appState.mode == .enterprise {
-                        NavigationLink(destination: CorporateHubView().environmentObject(appState)) {
-                            Label("Corporate Hub: Network, Resume, Jobs, AI", systemImage: "building.2.crop.circle")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .padding(.horizontal)
-                    }
-
-                    TabView(selection: $selectedTab) {
-                        postsGrid(Array(chitPosts.prefix(9))).tag("Chit")
-                        postsGrid(chatPosts).tag("Chat")
-                        postsGrid(repostPosts).tag("Reposts")
-                        listContainer {
-                            combinedPostSection
-                        }.tag("Combined")
-                        postsGrid(reelPosts).tag("Reels")
-                        postsGrid(taggedPosts).tag("Tagged")
-                    }
-                    .frame(height: 420)
-                    .tabViewStyle(.page(indexDisplayMode: .never))
-
-                    if selectedTab == "Tagged", !appState.hiddenTaggedPostIDs.isEmpty {
-                        HStack {
-                            Text("\(appState.hiddenTaggedPostIDs.count) tagged posts hidden")
-                                .font(.caption2)
-                                .foregroundStyle(secondaryText)
-                            Spacer()
-                            Button("Restore all") {
-                                appState.unhideAllTaggedPosts()
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        .padding(.horizontal)
-                    }
-
-                    if appState.currentUser.isBusinessAccount {
-                        HStack {
-                            Image(systemName: "checkmark.seal.fill")
-                                .foregroundStyle(BrandPalette.neonGreen)
-                            Text("Business verified — you can post jobs. Each job requires approval before it goes live.")
-                                .font(.caption)
-                                .foregroundStyle(secondaryText)
-                        }
-                    } else {
-                        NavigationLink(destination: VerificationView().environmentObject(appState)) {
-                            Label("Request business verification to post jobs", systemImage: "briefcase.badge.person.crop")
-                        }
-                    }
-                    Toggle(
-                        "Allow enterprise side to reveal social @username",
-                        isOn: Binding(
-                            get: { appState.currentUser.allowEnterpriseReveal },
-                            set: { appState.setEnterpriseReveal($0) }
-                        )
-                    )
-                    .padding(.horizontal)
-                    .foregroundStyle(primaryText)
-
-                    Toggle("Hide likes count by default on new posts", isOn: $appState.hideLikeCountsByDefault)
-                        .padding(.horizontal)
-                        .foregroundStyle(primaryText)
-
-                    Toggle("Hide comments count by default on new posts", isOn: $appState.hideCommentCountsByDefault)
-                        .padding(.horizontal)
-                        .foregroundStyle(primaryText)
-
-                    EliteSectionCard {
-                        DisclosureGroup("Account Tools", isExpanded: $showAccountTools) {
-                            VStack(spacing: 8) {
-                                NavigationLink(destination: VerificationView().environmentObject(appState)) {
-                                    Label("Verification request", systemImage: "checkmark.seal")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: LaunchSettingsView().environmentObject(appState)) {
-                                    Label("Launch settings center", systemImage: "gearshape.2.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: SafetySettingsView().environmentObject(appState)) {
-                                    Label("Safety settings", systemImage: "checkmark.shield.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: NotificationSettingsView().environmentObject(appState)) {
-                                    Label("Notification settings", systemImage: "bell.badge.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: PrivacyControlView().environmentObject(appState)) {
-                                    Label("Privacy controls", systemImage: "hand.raised.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: SocialLinksView().environmentObject(appState)) {
-                                    Label("Connected platforms", systemImage: "link")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                if appState.canAccessInternalDashboard {
-                                    NavigationLink(destination: AdminDashboardView().environmentObject(appState)) {
-                                        Label("Chit Chat Social admin", systemImage: "person.badge.shield.checkmark")
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                    }
-                                }
-                            }
-                            .padding(.top, 8)
-                        }
-                        .tint(.white)
-                        .foregroundStyle(primaryText)
-                    }
-                    .padding(.horizontal)
-
-                    EliteSectionCard {
-                        DisclosureGroup("Creator & Business Tools", isExpanded: $showCreatorTools) {
-                            VStack(spacing: 8) {
-                                NavigationLink(destination: ResumeEnterpriseView().environmentObject(appState)) {
-                                    Label("Resume & enterprise profile", systemImage: "doc.text.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: CommunitiesHubView().environmentObject(appState)) {
-                                    Label("Groups & communities", systemImage: "person.3.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: ShopHubView().environmentObject(appState)) {
-                                    Label("Shop & live selling", systemImage: "bag.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: PulseBoardView().environmentObject(appState)) {
-                                    Label("Pulse public feed", systemImage: "bolt.bubble.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                NavigationLink(destination: MusicHubView().environmentObject(appState)) {
-                                    Label("Music hub", systemImage: "music.note")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                            }
-                            .padding(.top, 8)
-                        }
-                        .tint(.white)
-                        .foregroundStyle(primaryText)
-                    }
-                    .padding(.horizontal)
-
-                    if appState.emailVerificationSent {
-                        Text("Verification email sent. Update emails: \(appState.wantsProductUpdateEmails ? "On" : "Off")")
-                            .font(.footnote)
-                            .foregroundStyle(secondaryText)
-                            .padding(.horizontal)
-                    }
-
-                    Button("Log out") {
-                        appState.endSession()
-                    }
-                    .buttonStyle(.bordered)
-                    .padding(.bottom)
+                    profileMainColumn
+                        .padding(.top, 4)
                 }
-                .padding(.top, 4)
-                }
+                .scrollIndicators(.visible)
+                .contentMargins(.bottom, 28, for: .scrollContent)
             }
             .navigationTitle("Profile")
             .toolbar {
@@ -568,6 +200,49 @@ struct ProfileView: View {
             .sheet(isPresented: $showAvatarStory) {
                 AvatarStoryView()
                     .environmentObject(appState)
+            }
+            .sheet(isPresented: $showContactInfoSheet) {
+                NavigationStack {
+                    Form {
+                        Section {
+                            Text("Use a real email and mobile number so you can recover your password and receive account notices.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Section("Your details") {
+                            TextField("Email", text: $contactEmailDraft)
+                                .textInputAutocapitalization(.never)
+                                .keyboardType(.emailAddress)
+                                .autocorrectionDisabled()
+                            TextField("Phone (optional)", text: $contactPhoneDraft)
+                                .keyboardType(.phonePad)
+                        }
+                        if !contactInfoMessage.isEmpty {
+                            Section {
+                                Text(contactInfoMessage)
+                                    .font(.caption)
+                                    .foregroundStyle(contactInfoMessage == "Saved." ? .green : .orange)
+                            }
+                        }
+                    }
+                    .navigationTitle("Contact info")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { showContactInfoSheet = false }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Save") {
+                                contactInfoMessage = ""
+                                if let err = appState.updateAccountContactInfo(email: contactEmailDraft, phone: contactPhoneDraft) {
+                                    contactInfoMessage = err
+                                } else {
+                                    contactInfoMessage = "Saved."
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .confirmationDialog("Create video bubble from old stories", isPresented: $showVideoBubbleDialog, titleVisibility: .visible) {
                 Button("Moments section") {
@@ -719,7 +394,449 @@ struct ProfileView: View {
         }
     }
 
+    /// Split out main column to keep `body` type-checking fast.
     @ViewBuilder
+    private var profileMainColumn: some View {
+            VStack(spacing: 12) {
+                profileHeroCard
+                if appState.session?.isAuthenticated == true && appState.needsContactInfoUpdate {
+                    Button {
+                        contactEmailDraft = appState.currentUser.accountEmail
+                        contactPhoneDraft = appState.currentUser.accountPhone
+                        contactInfoMessage = ""
+                        showContactInfoSheet = true
+                    } label: {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Update your email and phone")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(primaryText)
+                                Text(
+                                    "Sign in with Apple/Google may have started with placeholders. Add real contact info for account recovery and notifications."
+                                )
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                                .multilineTextAlignment(.leading)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(secondaryText)
+                        }
+                        .padding(12)
+                        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.92))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.orange.opacity(0.45), lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal)
+                }
+                if appState.shouldShowProfileQuoteBubble {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "bubble.left.fill")
+                            .foregroundStyle(BrandPalette.neonBlue)
+                        Text(appState.currentUser.profileQuote)
+                            .font(.subheadline)
+                            .foregroundStyle(primaryText)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.92))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal)
+                }
+                VStack(spacing: 8) {
+                    Toggle("Show profile quote bubble", isOn: Binding(
+                        get: { appState.currentUser.isProfileQuoteVisible },
+                        set: { appState.setProfileQuoteVisibility($0) }
+                    ))
+                    .foregroundStyle(primaryText)
+                    .padding(.horizontal)
+                    Button(showQuoteEditor ? "Save quote" : "Edit quote bubble") {
+                        if showQuoteEditor {
+                            if appState.setProfileQuote(quoteDraft) {
+                                profileQuoteModerationMessage = ""
+                                showQuoteEditor.toggle()
+                            } else {
+                                profileQuoteModerationMessage = "Quote blocked by safety checks. Check Activity for details."
+                            }
+                        } else {
+                            quoteDraft = appState.currentUser.profileQuote
+                            showQuoteEditor.toggle()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    Button("Delete quote", role: .destructive) {
+                        quoteDraft = ""
+                        appState.setProfileQuote("")
+                        appState.setProfileQuoteVisibility(false)
+                    }
+                    .buttonStyle(.bordered)
+                    if showQuoteEditor {
+                        TextField("Write your quote (if empty, bubble is hidden)", text: $quoteDraft, axis: .vertical)
+                            .lineLimit(2...5)
+                            .textFieldStyle(EliteTextFieldStyle())
+                            .padding(.horizontal)
+                    }
+                    if !profileQuoteModerationMessage.isEmpty {
+                        Text(profileQuoteModerationMessage)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.orange)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                    }
+                }
+                if !conversionStatusMessage.isEmpty {
+                    Text(conversionStatusMessage)
+                        .font(.caption)
+                        .foregroundStyle(secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal)
+                }
+                if appState.canUndoPostDeletion {
+                    HStack(spacing: 8) {
+                        Label("Post deleted", systemImage: "trash")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                        Spacer()
+                        Button("Undo") {
+                            _ = appState.undoLastDeletedPost()
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding(.horizontal)
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(tabs, id: \.self) { tab in
+                            Button(tab) {
+                                withAnimation(MotionTokens.spring) {
+                                    selectedTab = tab
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .font(.caption.bold())
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 7)
+                            .background(
+                                Capsule()
+                                    .fill(selectedTab == tab ? BrandPalette.neonBlue.opacity(0.28) : BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.86))
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme).opacity(selectedTab == tab ? 0.8 : 0.5), lineWidth: 1)
+                            )
+                            .foregroundStyle(primaryText)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
+                HStack {
+                    Spacer()
+                    statChip(title: "Posts", value: "\(appState.posts.count)")
+                    Spacer()
+                }
+                .padding(.top, 6)
+
+                HStack(spacing: 8) {
+                    quickActionButton("Edit profile", system: "square.and.pencil") {
+                        showIdentityEditor = true
+                        showQuoteEditor = true
+                    }
+                    quickActionButton("Share profile", system: "square.and.arrow.up") {
+                        conversionStatusMessage = "Profile share card prepared. Use your native share flow from this screen."
+                    }
+                    quickActionButton("Dashboard", system: "chart.xyaxis.line") {
+                        showInsights = true
+                    }
+                }
+                .padding(.horizontal)
+
+                storyBubbleSections
+
+                EliteSectionCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Profile Modes")
+                                .font(.headline)
+                                .foregroundStyle(primaryText)
+                            Spacer()
+                            Text(appState.mode == .social ? "Social Active" : "Corporate Active")
+                                .font(.caption2.bold())
+                                .foregroundStyle(BrandPalette.neonGreen)
+                        }
+                        HStack(spacing: 8) {
+                            Button("Social") {
+                                appState.setMode(.social)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!appState.hasSocialProfile)
+                            Button("Corporate") {
+                                appState.setMode(.enterprise)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!appState.hasCorporateProfile)
+                        }
+                        Text("Social: \(appState.profileAvailabilityLabel(.social)) • Corporate: \(appState.profileAvailabilityLabel(.enterprise))")
+                            .font(.caption2)
+                            .foregroundStyle(secondaryText)
+                    }
+                }
+                .padding(.horizontal)
+
+                EliteSectionCard {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Identity")
+                                .font(.headline)
+                                .foregroundStyle(primaryText)
+                            Spacer()
+                            Button(showIdentityEditor ? "Save" : "Edit") {
+                                if showIdentityEditor {
+                                    appState.updateCurrentIdentity(
+                                        enterpriseAlias: aliasDraft,
+                                        displayName: displayNameDraft
+                                    )
+                                }
+                                showIdentityEditor.toggle()
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        if showIdentityEditor {
+                            TextField("Corporate alias", text: $aliasDraft)
+                                .textFieldStyle(EliteTextFieldStyle())
+                            TextField("Display name", text: $displayNameDraft)
+                                .textFieldStyle(EliteTextFieldStyle())
+                            TextField("Profile link (https://...)", text: $profileLinkDraft)
+                                .textFieldStyle(EliteTextFieldStyle())
+                            HStack(spacing: 8) {
+                                Button("Save profile link") {
+                                    appState.setProfileLink(profileLinkDraft)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                Button("Delete link", role: .destructive) {
+                                    profileLinkDraft = ""
+                                    appState.setProfileLink("")
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        } else {
+                            Text("Alias: \(appState.currentUser.enterpriseAlias)")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                            Text("Display: \(appState.currentUser.displayName)")
+                                .font(.caption)
+                                .foregroundStyle(secondaryText)
+                            if !appState.currentUser.profileLinkURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                               let url = URL(string: appState.currentUser.profileLinkURL) {
+                                Link(destination: url) {
+                                    Label(appState.currentUser.profileLinkURL, systemImage: "link")
+                                        .font(.caption)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+
+                NavigationLink(destination: ConnectionsView().environmentObject(appState)) {
+                    Label("Followers, following, suggested, contacts", systemImage: "person.2.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .padding(.horizontal)
+
+                if appState.mode == .enterprise {
+                    NavigationLink(destination: CorporateHubView().environmentObject(appState)) {
+                        Label("Corporate Hub: Network, Resume, Jobs, AI", systemImage: "building.2.crop.circle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.horizontal)
+                }
+
+                TabView(selection: $selectedTab) {
+                    postsGrid(Array(chitPosts.prefix(9))).tag("Chit")
+                    postsGrid(chatPosts).tag("Chat")
+                    postsGrid(repostPosts).tag("Reposts")
+                    listContainer {
+                        combinedPostSection
+                    }.tag("Combined")
+                    postsGrid(reelPosts).tag("Reels")
+                    postsGrid(taggedPosts).tag("Tagged")
+                }
+                .frame(minHeight: 360, idealHeight: 420, maxHeight: 560)
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                if selectedTab == "Tagged", !appState.hiddenTaggedPostIDs.isEmpty {
+                    HStack {
+                        Text("\(appState.hiddenTaggedPostIDs.count) tagged posts hidden")
+                            .font(.caption2)
+                            .foregroundStyle(secondaryText)
+                        Spacer()
+                        Button("Restore all") {
+                            appState.unhideAllTaggedPosts()
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .padding(.horizontal)
+                }
+
+                if appState.currentUser.isBusinessAccount {
+                    HStack {
+                        Image(systemName: "checkmark.seal.fill")
+                            .foregroundStyle(BrandPalette.neonGreen)
+                        Text("Business verified — you can post jobs. Each job requires approval before it goes live.")
+                            .font(.caption)
+                            .foregroundStyle(secondaryText)
+                    }
+                } else {
+                    NavigationLink(destination: VerificationView().environmentObject(appState)) {
+                        Label("Request business verification to post jobs", systemImage: "briefcase.badge.person.crop")
+                    }
+                }
+                Toggle(
+                    "Allow enterprise side to reveal social @username",
+                    isOn: Binding(
+                        get: { appState.currentUser.allowEnterpriseReveal },
+                        set: { appState.setEnterpriseReveal($0) }
+                    )
+                )
+                .padding(.horizontal)
+                .foregroundStyle(primaryText)
+
+                Toggle("Hide likes count by default on new posts", isOn: $appState.hideLikeCountsByDefault)
+                    .padding(.horizontal)
+                    .foregroundStyle(primaryText)
+
+                Toggle("Hide comments count by default on new posts", isOn: $appState.hideCommentCountsByDefault)
+                    .padding(.horizontal)
+                    .foregroundStyle(primaryText)
+
+                Toggle(
+                    "Ad account (run in-feed sponsored posts & paid reshares)",
+                    isOn: Binding(
+                        get: { appState.currentUser.isAdAccount },
+                        set: { appState.setAdAccountEnabled($0) }
+                    )
+                )
+                .padding(.horizontal)
+                .foregroundStyle(primaryText)
+
+                EliteSectionCard {
+                    DisclosureGroup("Account Tools", isExpanded: $showAccountTools) {
+                        VStack(spacing: 8) {
+                            NavigationLink(destination: VerificationView().environmentObject(appState)) {
+                                Label("Verification request", systemImage: "checkmark.seal")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            NavigationLink(destination: LaunchSettingsView().environmentObject(appState)) {
+                                Label("Launch settings center", systemImage: "gearshape.2.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            NavigationLink(destination: SafetySettingsView().environmentObject(appState)) {
+                                Label("Safety settings", systemImage: "checkmark.shield.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            NavigationLink(destination: NotificationSettingsView().environmentObject(appState)) {
+                                Label("Notification settings", systemImage: "bell.badge.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            Button {
+                                let subj = "Chit Chat Social support"
+                                let q = subj.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                                if let url = URL(string: "mailto:bruce44%2Bchitchat@getbusyllc.com?subject=\(q)") {
+                                    openURL(url)
+                                }
+                            } label: {
+                                Label("Help & support", systemImage: "envelope.open.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                            NavigationLink(destination: PrivacyControlView().environmentObject(appState)) {
+                                Label("Privacy controls", systemImage: "hand.raised.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            NavigationLink(destination: SocialLinksView().environmentObject(appState)) {
+                                Label("Connected platforms", systemImage: "link")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            if appState.canAccessInternalDashboard {
+                                NavigationLink(destination: AdminDashboardView().environmentObject(appState)) {
+                                    Label("Chit Chat Social admin", systemImage: "person.badge.shield.checkmark")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
+                    .tint(.white)
+                    .foregroundStyle(primaryText)
+                }
+                .padding(.horizontal)
+
+                EliteSectionCard {
+                    DisclosureGroup("Creator & Business Tools", isExpanded: $showCreatorTools) {
+                        VStack(spacing: 8) {
+                            NavigationLink(destination: ResumeEnterpriseView().environmentObject(appState)) {
+                                Label("Resume & enterprise profile", systemImage: "doc.text.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            NavigationLink(destination: CommunitiesHubView().environmentObject(appState)) {
+                                Label("Groups & communities", systemImage: "person.3.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            NavigationLink(destination: ShopHubView().environmentObject(appState)) {
+                                Label("Shop & live selling", systemImage: "bag.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            NavigationLink(destination: PulseBoardView().environmentObject(appState)) {
+                                Label("Pulse public feed", systemImage: "bolt.bubble.fill")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            NavigationLink(destination: MusicHubView().environmentObject(appState)) {
+                                Label("Music hub", systemImage: "music.note")
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
+                    .tint(.white)
+                    .foregroundStyle(primaryText)
+                }
+                .padding(.horizontal)
+
+                if appState.emailVerificationSent {
+                    Text("Verification email sent. Update emails: \(appState.wantsProductUpdateEmails ? "On" : "Off")")
+                        .font(.footnote)
+                        .foregroundStyle(secondaryText)
+                        .padding(.horizontal)
+                }
+
+                Button("Log out") {
+                    appState.endSession()
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red.opacity(0.85))
+                .padding(.bottom, 24)
+
+                Color.clear
+                    .frame(height: 120)
+                    .accessibilityHidden(true)
+            }
+    }
+
     private var profileHeroCard: some View {
         EliteSectionCard {
             VStack(alignment: .leading, spacing: 10) {
@@ -876,6 +993,13 @@ struct ProfileView: View {
             showAvatarStory = true
         } label: {
             avatarVisual
+                .overlay(alignment: .bottom) {
+                    if appState.isHandleLive(appState.currentUser.handle) {
+                        LiveStoryBadge()
+                            .scaleEffect(0.9)
+                            .offset(y: 12)
+                    }
+                }
         }
         .buttonStyle(.plain)
         .overlay(alignment: .bottomTrailing) {

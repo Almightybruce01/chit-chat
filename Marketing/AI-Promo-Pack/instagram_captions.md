@@ -2,9 +2,9 @@
 
 ## Launch Captions
 
-1. The next era of social is here. Real content, real community, real momentum. #ChitChat #SocialReimagined
+1. The next era of social is here. Real content, real community, real momentum. #ChitChatSocial #SocialReimagined
 2. We rebuilt everything: reels, messaging, profiles, and corporate networking in one platform. #CreatorTools #FutureSocial
-3. One app for social energy and professional growth. Switch modes. Stay authentic. #AllInOne #ChitChatApp
+3. One app for social energy and professional growth. Switch modes. Stay authentic. #AllInOne #ChitChatSocial
 4. If you wanted a platform that feels premium and moves fast, this is it. #Reels #Messaging #CorporateMode
 
 ## Animal + Character Content Captions

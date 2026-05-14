@@ -1,6 +1,6 @@
-# Publishes deploy-support/index.html to GitHub Pages.
-# After push: Repo → Settings → Pages → Build and deployment → Source: GitHub Actions.
-# Your Support URL: https://<your-username>.github.io/<repo-name>/
+# Chit Chat Social — publishes deploy-support/index.html to GitHub Pages.
+# After push: repo Settings → Pages → Build and deployment → Source: GitHub Actions.
+# Example Support URL (current repo slug): https://almightybruce01.github.io/chit-chat/
 
 name: Deploy support site
 

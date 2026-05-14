@@ -11,6 +11,7 @@ enum ModerationLabel: String {
     case missingRequiredMedia
     /// Account is suspended (policy) — do not publish or send.
     case accountSuspended
+    case sponsoredNotEligible
 }
 
 struct ModerationResult {

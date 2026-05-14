@@ -278,9 +278,13 @@ struct HomeView: View {
                     HStack(spacing: 12) {
                         ForEach(handles, id: \.self) { handle in
                             Button {
-                                selectedStoryHandle = handle
-                                appState.markStorySeen(handle: handle)
-                                showStoryViewer = true
+                                if appState.isHandleLive(handle) {
+                                    appState.presentLiveRoom(for: handle)
+                                } else {
+                                    selectedStoryHandle = handle
+                                    appState.markStorySeen(handle: handle)
+                                    showStoryViewer = true
+                                }
                             } label: {
                                 VStack(spacing: 6) {
                                     storyAvatar(for: handle)
@@ -378,42 +382,52 @@ struct HomeView: View {
     @ViewBuilder
     private func storyAvatar(for handle: String) -> some View {
         let hasSeen = appState.hasSeenStory(handle: handle)
-        ZStack(alignment: .bottomTrailing) {
-            Circle()
-                .strokeBorder(
-                    LinearGradient(
-                        colors: hasSeen
-                            ? [.white.opacity(0.35), .white.opacity(0.18)]
-                            : [BrandPalette.accentPink, BrandPalette.neonBlue],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 2.6
-                )
-                .frame(width: 66, height: 66)
-            Group {
-                if let data = appState.profilePhoto(for: handle), let image = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                } else {
-                    Circle()
-                        .fill(BrandPalette.neonBlue.opacity(0.28))
-                        .overlay(
-                            Text(String(handle.replacingOccurrences(of: "@", with: "").prefix(1)).uppercased())
-                                .font(.caption.bold())
-                                .foregroundStyle(.white)
-                        )
+        let isLive = appState.isHandleLive(handle)
+        ZStack(alignment: .bottom) {
+            ZStack(alignment: .bottomTrailing) {
+                Circle()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: isLive
+                                ? [Color(red: 0.98, green: 0.25, blue: 0.38), Color(red: 0.99, green: 0.55, blue: 0.2)]
+                                : hasSeen
+                                    ? [.white.opacity(0.35), .white.opacity(0.18)]
+                                    : [BrandPalette.accentPink, BrandPalette.neonBlue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 2.6
+                    )
+                    .frame(width: 66, height: 66)
+                Group {
+                    if let data = appState.profilePhoto(for: handle), let image = UIImage(data: data) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Circle()
+                            .fill(BrandPalette.neonBlue.opacity(0.28))
+                            .overlay(
+                                Text(String(handle.replacingOccurrences(of: "@", with: "").prefix(1)).uppercased())
+                                    .font(.caption.bold())
+                                    .foregroundStyle(.white)
+                            )
+                    }
+                }
+                .frame(width: 56, height: 56)
+                .clipShape(Circle())
+
+                if handle.caseInsensitiveCompare(appState.currentUser.handle) == .orderedSame {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(BrandPalette.neonGreen)
+                        .background(Circle().fill(.black))
                 }
             }
-            .frame(width: 56, height: 56)
-            .clipShape(Circle())
-
-            if handle.caseInsensitiveCompare(appState.currentUser.handle) == .orderedSame {
-                Image(systemName: "plus.circle.fill")
-                    .font(.caption)
-                    .foregroundStyle(BrandPalette.neonGreen)
-                    .background(Circle().fill(.black))
+            if isLive {
+                LiveStoryBadge()
+                    .scaleEffect(0.95)
+                    .offset(y: 10)
             }
         }
     }
@@ -865,6 +879,10 @@ struct RankingLabView: View {
 
 struct MonetizationLabView: View {
     @EnvironmentObject private var appState: AppState
+    @State private var adBrandHandle = ""
+    @State private var adExternalURL = ""
+    @State private var adProductNote = ""
+    @State private var adDraftCaption = ""
 
     var body: some View {
         let insights = appState.monetizationInsights()
@@ -888,6 +906,56 @@ struct MonetizationLabView: View {
                         appState.creatorAffiliateLink = appState.suggestedAffiliateLink(from: seed)
                     }
                     .buttonStyle(.borderedProminent)
+                }
+                Section("Sponsored post (brand / ad account)") {
+                    if !appState.canRunPaidAds {
+                        Text("Turn on Profile → Ad account (or verify business) and keep native sponsored feed enabled in the ops dashboard. Optionally set Launch Settings → Public ads flags URL so the app syncs the kill switch.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    TextField("Brand @handle", text: $adBrandHandle)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    TextField("Product or offer (for AI-style copy)", text: $adProductNote, axis: .vertical)
+                        .lineLimit(2...4)
+                    Button("Generate ad copy (on-device)") {
+                        adDraftCaption = appState.suggestedAdCopy(for: adProductNote, sponsorBrandHandle: adBrandHandle)
+                    }
+                    .buttonStyle(.bordered)
+                    TextField("Caption", text: $adDraftCaption, axis: .vertical)
+                        .lineLimit(3...8)
+                    TextField("https:// landing link (optional)", text: $adExternalURL)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.URL)
+                        .autocorrectionDisabled()
+                    Button("Publish sponsored Chit post") {
+                        let cap = adDraftCaption.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? appState.suggestedAdCopy(for: adProductNote, sponsorBrandHandle: adBrandHandle)
+                            : adDraftCaption
+                        let img = appState.generatedMediaImageData(seed: "\(appState.currentUser.handle)-ad-\(UUID().uuidString.prefix(8))")
+                        _ = appState.publishPost(
+                            caption: cap,
+                            type: .post,
+                            imageData: img,
+                            storyAudience: .public,
+                            audience: .public,
+                            isCollab: false,
+                            areLikesHidden: false,
+                            areCommentsHidden: false,
+                            blockNudity: true,
+                            surfaceStyle: .chit,
+                            isSponsoredAd: true,
+                            sponsorBrandHandle: adBrandHandle,
+                            sponsorExternalURL: adExternalURL
+                        )
+                    }
+                    .buttonStyle(NeonPrimaryButtonStyle())
+                    .disabled(
+                        adBrandHandle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !appState.canRunPaidAds
+                    )
+                    Text("Disclosure (#ad) is added automatically when the brand handle is set. Tap-through uses a placeholder web profile URL until in-app brand pages ship.")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 Section("Insights") {
                     Label("Sponsored posts: \(insights.sponsoredPosts)", systemImage: "tag.fill")
@@ -1318,6 +1386,51 @@ struct CloseFriendsFeedView: View {
     }
 }
 
+private struct SponsoredRepostSheet: View {
+    let post: PostItem
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var brand = ""
+    @State private var url = ""
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                EliteBackground()
+                Form {
+                    Section("Paying brand") {
+                        TextField("Brand @handle", text: $brand)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        TextField("Optional https:// offer link", text: $url)
+                            .textInputAutocapitalization(.never)
+                            .keyboardType(.URL)
+                            .autocorrectionDisabled()
+                    }
+                    Section {
+                        Button("Publish sponsored repost") {
+                            appState.sponsoredRepostPost(post.id, sponsorBrandHandle: brand, sponsorExternalURL: url)
+                            dismiss()
+                        }
+                        .disabled(
+                            brand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !appState.canRunPaidAds
+                        )
+                    } footer: {
+                        if !appState.canRunPaidAds {
+                            Text("Ad account or verified business required, and branded in-feed promos must be enabled (Instagram-style — not third-party ad SDKs).")
+                                .font(.caption2)
+                        }
+                    }
+                }
+                .scrollContentBackground(.hidden)
+                .background(Color.clear)
+            }
+            .navigationTitle("Sponsored repost")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
 struct FeedView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
@@ -1329,11 +1442,13 @@ struct FeedView: View {
     @State private var commentingPost: PostItem?
     @State private var likesPost: PostItem?
     @State private var repostsPost: PostItem?
+    @State private var sponsorRepostTarget: PostItem?
     @State private var reactionPickerPost: PostItem?
     @State private var draftComment = ""
     @State private var editedCaption = ""
     @State private var expandedCaptionPostIDs: Set<UUID> = []
     @State private var heartPulsePostID: UUID?
+    @State private var reportTargetPost: PostItem?
     private var primaryText: Color { BrandPalette.adaptiveTextPrimary(for: colorScheme) }
     private var secondaryText: Color { BrandPalette.adaptiveTextSecondary(for: colorScheme) }
 
@@ -1351,7 +1466,24 @@ struct FeedView: View {
                 VStack(spacing: 0) {
                 EliteCard {
                     VStack(alignment: .leading, spacing: 8) {
-                        HStack {
+                        HStack(spacing: 10) {
+                            Group {
+                                if appState.isHandleLive(post.authorHandle) {
+                                    Button {
+                                        appState.presentLiveRoom(for: post.authorHandle)
+                                    } label: {
+                                        ZStack(alignment: .bottom) {
+                                            profileAvatar(for: post.authorHandle, size: 40)
+                                            LiveStoryBadge()
+                                                .scaleEffect(0.82)
+                                                .offset(y: 10)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                } else {
+                                    profileAvatar(for: post.authorHandle, size: 40)
+                                }
+                            }
                             Text(post.authorHandle)
                                 .font(.headline)
                                 .foregroundStyle(primaryText)
@@ -1390,6 +1522,18 @@ struct FeedView: View {
                                     }
                                     Button("Delete post", role: .destructive) {
                                         appState.deletePostWithUndo(post.id)
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .foregroundStyle(secondaryText)
+                                }
+                            } else {
+                                Menu {
+                                    Button("Report content…") {
+                                        reportTargetPost = post
+                                    }
+                                    Button("Block \(post.authorHandle)", role: .destructive) {
+                                        appState.blockHandle(post.authorHandle)
                                     }
                                 } label: {
                                     Image(systemName: "ellipsis.circle")
@@ -1482,14 +1626,7 @@ struct FeedView: View {
                                     metricAction: nil
                                 )
 
-                                iconMetricButton(
-                                    icon: "arrow.2.squarepath",
-                                    value: post.repostCount,
-                                    tint: BrandPalette.neonGreen,
-                                    disabled: false,
-                                    action: { appState.repostPost(post.id) },
-                                    metricAction: { repostsPost = post }
-                                )
+                                repostMenu(for: post)
                             }
 
                             Spacer(minLength: 8)
@@ -1558,6 +1695,11 @@ struct FeedView: View {
                     Button(appState.isPostPinned(post.id) ? "Unpin" : "Pin", systemImage: appState.isPostPinned(post.id) ? "pin.slash.fill" : "pin.fill") {
                         appState.togglePinPost(post.id)
                     }
+                    if appState.canRunPaidAds {
+                        Button("Sponsored repost…", systemImage: "dollarsign.circle") {
+                            sponsorRepostTarget = post
+                        }
+                    }
                     if post.surfaceStyle == .chat {
                         Button("Quick Reply", systemImage: "arrowshape.turn.up.left.fill") {
                             appState.replyToPost(post.id, text: "Great take, thanks for sharing.")
@@ -1580,9 +1722,26 @@ struct FeedView: View {
                                 draftComment = ""
                                 commentingPost = post
                             }
-                            socialActionButton(title: "Share", system: "arrowshape.turn.up.right") {
-                                appState.repostPost(post.id)
+                            Menu {
+                                Button("Repost", systemImage: "arrow.2.squarepath") {
+                                    appState.repostPost(post.id)
+                                }
+                                if appState.canRunPaidAds {
+                                    Button("Sponsored repost…", systemImage: "dollarsign.circle") {
+                                        sponsorRepostTarget = post
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "arrowshape.turn.up.right")
+                                    Text("Share")
+                                }
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(primaryText.opacity(0.9))
+                                .frame(maxWidth: .infinity, minHeight: 34)
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                             socialActionButton(title: "React", system: "face.smiling") {
                                 reactionPickerPost = post
                             }
@@ -1718,6 +1877,103 @@ struct FeedView: View {
             Button("💯") { applyReaction("💯") }
             Button("👏") { applyReaction("👏") }
             Button("Cancel", role: .cancel) { reactionPickerPost = nil }
+        }
+        .sheet(item: $sponsorRepostTarget) { post in
+            SponsoredRepostSheet(post: post)
+                .environmentObject(appState)
+        }
+        .confirmationDialog("Report this content", isPresented: Binding(
+            get: { reportTargetPost != nil },
+            set: { if !$0 { reportTargetPost = nil } }
+        ), titleVisibility: .visible) {
+            Button("Spam or scams") { submitContentReport(reason: "Spam or scams") }
+            Button("Harassment or bullying") { submitContentReport(reason: "Harassment or bullying") }
+            Button("Nudity or sexual content") { submitContentReport(reason: "Nudity or sexual content") }
+            Button("Violence or dangerous activity") { submitContentReport(reason: "Violence or dangerous activity") }
+            Button("Cancel", role: .cancel) { reportTargetPost = nil }
+        } message: {
+            Text("There is zero tolerance for abusive content. Our team reviews reports within 24 hours.")
+        }
+    }
+
+    private func submitContentReport(reason: String) {
+        guard let post = reportTargetPost else { return }
+        appState.reportUserContent(postID: post.id, authorHandle: post.authorHandle, reason: reason)
+        reportTargetPost = nil
+    }
+
+    @ViewBuilder
+    private func sponsoredAdChrome(for post: PostItem) -> some View {
+        if post.isSponsoredAd {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Text(appState.sponsorDisclosureRemoteLabel)
+                        .font(.caption2.bold())
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(Color.orange.opacity(0.42)))
+                    if post.sponsoredSourcePostID != nil {
+                        Text("Paid partnership")
+                            .font(.caption2)
+                            .foregroundStyle(secondaryText)
+                    }
+                }
+                HStack(spacing: 10) {
+                    if !post.sponsorBrandHandle.isEmpty {
+                        Button {
+                            appState.openSponsorBrandProfile(handle: post.sponsorBrandHandle)
+                        } label: {
+                            Label(post.sponsorBrandHandle, systemImage: "building.2.fill")
+                                .font(.caption.bold())
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange.opacity(0.92))
+                    }
+                    if !post.sponsorExternalURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Button("Offer link") {
+                            appState.openSponsorExternalURL(post.sponsorExternalURL)
+                        }
+                        .buttonStyle(.bordered)
+                        .font(.caption.bold())
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    @ViewBuilder
+    private func repostMenu(for post: PostItem) -> some View {
+        HStack(spacing: 6) {
+            Menu {
+                Button("Repost") {
+                    appState.repostPost(post.id)
+                }
+                if appState.canRunPaidAds {
+                    Button("Sponsored repost…") {
+                        sponsorRepostTarget = post
+                    }
+                }
+            } label: {
+                Image(systemName: "arrow.2.squarepath")
+                    .foregroundStyle(BrandPalette.neonGreen)
+                    .font(.headline)
+                    .frame(width: 24, height: 24)
+                    .padding(8)
+                    .background(BrandPalette.cardBg.opacity(0.72))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Repost options")
+
+            Button {
+                repostsPost = post
+            } label: {
+                Text("\(post.repostCount)")
+                    .foregroundStyle(primaryText.opacity(0.9))
+            }
+            .buttonStyle(.plain)
         }
     }
 
@@ -1887,6 +2143,7 @@ struct ChatPostsFeedView: View {
     @State private var composeText = ""
     @State private var composeMode: ChatComposeMode = .reply
     @State private var repliesPost: PostItem?
+    @State private var sponsorRepostTarget: PostItem?
 
     var body: some View {
         LazyVStack(spacing: 12) {
@@ -1923,6 +2180,7 @@ struct ChatPostsFeedView: View {
                                 }
                             }
                         }
+                        chatSponsoredChrome(for: post)
                         Text(post.caption)
                             .font(.body)
                             .foregroundStyle(BrandPalette.adaptiveTextPrimary(for: colorScheme))
@@ -1944,9 +2202,7 @@ struct ChatPostsFeedView: View {
                                 chatActionChip(title: "Thread", system: "text.bubble.fill") {
                                     repliesPost = post
                                 }
-                                chatActionChip(title: "\(post.repostCount)", system: "arrow.2.squarepath") {
-                                    appState.repostPost(post.id)
-                                }
+                                chatRepostMenuChip(for: post)
                                 chatActionChip(title: "Quote", system: "quote.bubble.fill") {
                                     composeMode = .quote
                                     composeText = ""
@@ -2019,6 +2275,69 @@ struct ChatPostsFeedView: View {
             }
             .presentationDetents([.fraction(0.45), .large])
         }
+        .sheet(item: $sponsorRepostTarget) { post in
+            SponsoredRepostSheet(post: post)
+                .environmentObject(appState)
+        }
+    }
+
+    @ViewBuilder
+    private func chatSponsoredChrome(for post: PostItem) -> some View {
+        if post.isSponsoredAd {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(appState.sponsorDisclosureRemoteLabel)
+                    .font(.caption2.bold())
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.orange.opacity(0.38)))
+                HStack(spacing: 8) {
+                    if !post.sponsorBrandHandle.isEmpty {
+                        Button {
+                            appState.openSponsorBrandProfile(handle: post.sponsorBrandHandle)
+                        } label: {
+                            Label(post.sponsorBrandHandle, systemImage: "building.2.fill")
+                                .font(.caption.bold())
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.orange.opacity(0.9))
+                    }
+                    if !post.sponsorExternalURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Button("Offer link") {
+                            appState.openSponsorExternalURL(post.sponsorExternalURL)
+                        }
+                        .buttonStyle(.bordered)
+                        .font(.caption.bold())
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func chatRepostMenuChip(for post: PostItem) -> some View {
+        Menu {
+            Button("Repost", systemImage: "arrow.2.squarepath") {
+                appState.repostPost(post.id)
+            }
+            if appState.canRunPaidAds {
+                Button("Sponsored repost…", systemImage: "dollarsign.circle") {
+                    sponsorRepostTarget = post
+                }
+            }
+        } label: {
+            Label("\(post.repostCount)", systemImage: "arrow.2.squarepath")
+                .font(.caption.bold())
+                .foregroundStyle(.white.opacity(0.9))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(BrandPalette.cardBg.opacity(0.8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(BrandPalette.glassStroke, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
     }
 
     private func chatActionChip(title: String, system: String, action: @escaping () -> Void) -> some View {
@@ -2070,7 +2389,7 @@ private struct LoopingVideoView: View {
             Color.black
             VideoPlayer(player: player)
                 .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                .scaledToFill()
+                .aspectRatio(contentMode: .fill)
                 .clipped()
         }
         .onAppear {
@@ -2107,7 +2426,7 @@ private struct LoopingVideoDataView: View {
             VideoPlayer(player: player)
                 .opacity(resolvedURL != nil && !loadFailed ? 1 : 0)
                 .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
-                .scaledToFill()
+                .aspectRatio(contentMode: .fill)
                 .clipped()
             if loadFailed {
                 VStack(spacing: 10) {
@@ -2308,7 +2627,12 @@ struct ReelsView: View {
                                             .background(Circle().fill(.black.opacity(0.35)))
                                     }
                                     .buttonStyle(.plain)
-                                    progressHeader(for: item, isActive: selectedIndex == index)
+                                    progressHeader(
+                                        for: item,
+                                        isActive: selectedIndex == index,
+                                        pageIndex: index,
+                                        pageCount: safeReelItems.count
+                                    )
                                 }
                                 .padding(.top, max(4, proxy.safeAreaInsets.top))
                                 .padding(.horizontal, 14)
@@ -2661,7 +2985,7 @@ struct ReelsView: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 10)
                 }
-                .frame(maxHeight: 280)
+                .frame(maxHeight: min(420, UIScreen.main.bounds.height * 0.48))
 
                 HStack(spacing: 8) {
                     if let replyingToComment {
@@ -2711,7 +3035,7 @@ struct ReelsView: View {
     }
 
     private var reelItems: [ReelDemoItem] {
-        let source = appState.posts.filter { !$0.isArchived && ($0.type == .reel || $0.type == .shortVideo || $0.type == .story) }
+        let source = appState.posts.filter { !$0.isArchived && ($0.type == .reel || $0.type == .shortVideo || $0.type == .story) && !appState.isBlocked($0.authorHandle) }
         return source.map { post in
             let audioLabel: String = {
                 let t = post.caption.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2810,21 +3134,34 @@ struct ReelsView: View {
     }
 
     @ViewBuilder
-    private func progressHeader(for item: ReelDemoItem, isActive: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Capsule()
-                .fill(.white.opacity(0.24))
-                .frame(height: 4)
-                .overlay(alignment: .leading) {
-                    Capsule()
-                        .fill(BrandPalette.neonBlue)
-                        .frame(width: isActive ? 220 * animationPhase : 220, height: 4)
+    private func progressHeader(for item: ReelDemoItem, isActive: Bool, pageIndex: Int, pageCount: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if pageCount > 1 {
+                HStack(spacing: 4) {
+                    ForEach(0..<pageCount, id: \.self) { i in
+                        Capsule()
+                            .fill(i == pageIndex ? Color.white : Color.white.opacity(0.35))
+                            .frame(height: 3)
+                    }
                 }
-            Text("Reel • \(item.audioTitle)")
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.82))
+            } else {
+                Capsule()
+                    .fill(Color.white.opacity(0.38))
+                    .frame(height: 3)
+            }
+            HStack(spacing: 6) {
+                Image(systemName: "music.note")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(BrandPalette.neonGreen.opacity(0.95))
+                Text(item.audioTitle)
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.88))
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .opacity(isActive ? 1 : 0.55)
     }
 
     @ViewBuilder
@@ -2935,6 +3272,10 @@ struct ReelsView: View {
             HStack(spacing: 8) {
                 Text(item.authorHandle)
                     .font(.headline.bold())
+                if appState.isHandleLive(item.authorHandle) {
+                    LiveStoryBadge()
+                        .scaleEffect(0.88)
+                }
                 Button(isCreatorFollowed(item.authorHandle) ? "Following" : "Follow") {
                     toggleQuickFollow(item.authorHandle)
                 }
@@ -2980,6 +3321,7 @@ struct ReelsView: View {
                         .stroke(.white.opacity(0.18), lineWidth: 1)
                 )
         )
+        .shadow(color: .black.opacity(0.4), radius: 14, y: 7)
     }
 
     @ViewBuilder
@@ -3036,11 +3378,12 @@ struct ReelsView: View {
                 .frame(width: 38, height: 38)
                 .clipShape(Circle())
                 .overlay(Circle().stroke(.white.opacity(0.65), lineWidth: 1))
-                .overlay(alignment: .bottomTrailing) {
-                    Circle()
-                        .fill(BrandPalette.neonGreen)
-                        .frame(width: 10, height: 10)
-                        .overlay(Circle().stroke(.black.opacity(0.7), lineWidth: 1))
+                .overlay(alignment: .bottom) {
+                    if appState.isHandleLive(creator.handle) {
+                        LiveStoryBadge()
+                            .scaleEffect(0.65)
+                            .offset(y: 8)
+                    }
                 }
         } else {
             let initial = String(creator.handle.replacingOccurrences(of: "@", with: "").prefix(1)).uppercased()
@@ -3057,6 +3400,13 @@ struct ReelsView: View {
                         .foregroundStyle(.white)
                 )
                 .overlay(Circle().stroke(.white.opacity(0.65), lineWidth: 1))
+                .overlay(alignment: .bottom) {
+                    if appState.isHandleLive(creator.handle) {
+                        LiveStoryBadge()
+                            .scaleEffect(0.65)
+                            .offset(y: 8)
+                    }
+                }
         }
     }
 
@@ -3155,7 +3505,7 @@ struct ReelsView: View {
     private func toggleLike(_ item: ReelDemoItem) {
         HapticTokens.light()
         if appState.posts.contains(where: { $0.id == item.id }) {
-            appState.addLike(to: item.id)
+            appState.toggleLike(on: item.id)
         } else {
             if likedReelIDs.contains(item.id) {
                 likedReelIDs.remove(item.id)

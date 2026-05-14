@@ -43,6 +43,9 @@ ops/daily_company/out/latest-report.json
 ops/daily_company/out/history-export.json
 ops/daily_company/out/LATEST_REPORT.md
 
+# Firebase CLI — never commit auth exports
+firebase/.auth-export*.json
+
 # Secrets (never commit)
 .env
 *.pem

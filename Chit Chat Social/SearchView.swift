@@ -390,19 +390,45 @@ struct SearchView: View {
                 } else {
                     ForEach(profileResults.prefix(8)) { user in
                         HStack(spacing: 10) {
-                            Circle()
-                                .fill(BrandPalette.neonBlue.opacity(0.22))
-                                .frame(width: 42, height: 42)
-                                .overlay(Image(systemName: "person.fill").foregroundStyle(primaryText))
+                            ZStack(alignment: .bottom) {
+                                if let data = appState.profilePhoto(for: user.handle), let image = UIImage(data: data) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 42, height: 42)
+                                        .clipShape(Circle())
+                                        .overlay(Circle().stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: 1))
+                                } else {
+                                    Circle()
+                                        .fill(BrandPalette.neonBlue.opacity(0.22))
+                                        .frame(width: 42, height: 42)
+                                        .overlay(Image(systemName: "person.fill").foregroundStyle(primaryText))
+                                }
+                                if appState.isHandleLive(user.handle) {
+                                    LiveStoryBadge()
+                                        .scaleEffect(0.75)
+                                        .offset(y: 10)
+                                }
+                            }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(user.handle).font(.headline).foregroundStyle(primaryText)
                                 Text(user.displayName).font(.caption).foregroundStyle(secondaryText)
                             }
                             Spacer()
-                            Button("Follow") {
-                                appState.follow(user.handle)
+                            HStack(spacing: 8) {
+                                if appState.isHandleLive(user.handle) {
+                                    Button("Watch live") {
+                                        appState.presentLiveRoom(for: user.handle)
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .tint(.red.opacity(0.85))
+                                    .font(.caption.bold())
+                                }
+                                Button("Follow") {
+                                    appState.follow(user.handle)
+                                }
+                                .buttonStyle(.borderedProminent)
                             }
-                            .buttonStyle(.borderedProminent)
                         }
                     }
                 }

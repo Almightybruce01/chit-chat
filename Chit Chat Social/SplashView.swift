@@ -7,14 +7,32 @@
 
 import SwiftUI
 import AVFoundation
+import UIKit
 
 struct SplashView: View {
     @AppStorage("playStartupSounds") private var playStartupSounds = false
     @State private var popPlayer: AVAudioPlayer?
+    @State private var showMain = false
 
     var body: some View {
-        ContentView()
-            .onAppear(perform: playStartupSoundIfEnabled)
+        Group {
+            if showMain {
+                ContentView()
+            } else {
+                ZStack {
+                    Color(UIColor.systemBackground)
+                    ProgressView("Loading…")
+                }
+                .ignoresSafeArea()
+            }
+        }
+        .onAppear {
+            Task { @MainActor in
+                await Task.yield()
+                showMain = true
+            }
+            playStartupSoundIfEnabled()
+        }
     }
 
     private func playStartupSoundIfEnabled() {

@@ -3750,7 +3750,7 @@ final class AppState: ObservableObject {
             return surfaceStyle == .chat ? "Quick thought drop. Staying consistent and shipping daily." : "Fresh visual drop. Building daily momentum."
         }
         if surfaceStyle == .chat {
-            return "\(trimmed)\n\n#ChitChat #Conversation"
+            return "\(trimmed)\n\n#ChitChatSocial #Conversation"
         }
         return "\(trimmed)\n\n#Chit #CreatorMode"
     }
@@ -3848,7 +3848,7 @@ final class AppState: ObservableObject {
     func captionVariants(for base: String, surface: PostSurfaceStyle) -> (a: String, b: String) {
         let trimmed = base.trimmingCharacters(in: .whitespacesAndNewlines)
         let stem = trimmed.isEmpty ? (surface == .chat ? "Quick update for the community." : "Fresh visual drop for today.") : trimmed
-        let variantA = "\(stem)\n\n\(surface == .chat ? "#ChitChat #Discuss" : "#Chit #Create")"
+        let variantA = "\(stem)\n\n\(surface == .chat ? "#ChitChatSocial #Discuss" : "#Chit #Create")"
         let variantB = "\(stem) Tap in and share your take.\n\n\(surface == .chat ? "#Conversation #Now" : "#Visual #Trend")"
         return (variantA, variantB)
     }

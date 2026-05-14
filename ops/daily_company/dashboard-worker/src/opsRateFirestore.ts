@@ -4,9 +4,10 @@
  */
 
 import type { Env } from "./env";
+import { CHITCHAT_FS } from "./chitchatFirestoreCollections";
 import { getFirestoreAccessToken } from "./firestore";
 
-const COLLECTION = "_opsAuthRate";
+const COLLECTION = CHITCHAT_FS.opsAuthRate;
 export const OPS_RATE_WINDOW_MS = 15 * 60 * 1000;
 export const OPS_RATE_MAX_FAIL = 24;
 

@@ -6,6 +6,7 @@ struct LaunchSettingsView: View {
     @AppStorage("chitchat.appearance") private var appearanceRaw = AppAppearance.auto.rawValue
     @AppStorage("playStartupSounds") private var playStartupSounds = false
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = true
+    @AppStorage("chitchat.publicAdsFlagsURL") private var publicAdsFlagsURL = ""
 
     @State private var primaryMode: PlatformMode = .social
 
@@ -126,6 +127,21 @@ struct LaunchSettingsView: View {
                 Text("Auth can use Firebase, but feed/chat/story data currently runs from local app state unless a live backend service is wired.")
                     .font(.caption2)
                     .foregroundStyle(secondaryText)
+                Text("Partner / branded promos URL")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(primaryText)
+                Text("Optional HTTPS URL to GET /api/public/ads-flags. When set, the app syncs in-feed branded placements (Instagram-style partner labels) — not third-party ad networks.")
+                    .font(.caption2)
+                    .foregroundStyle(secondaryText)
+                TextField("https://your-worker.workers.dev/api/public/ads-flags", text: $publicAdsFlagsURL)
+                    .textFieldStyle(.roundedBorder)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+                Button("Refresh partner flags now") {
+                    appState.refreshPublicAdsFlagsFromRemoteIfConfigured()
+                }
+                .buttonStyle(.borderedProminent)
             }
         }
     }

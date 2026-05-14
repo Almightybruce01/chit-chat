@@ -8,7 +8,7 @@ Use **Chit Chat Social** as the primary App Store name (up to 30 characters). If
 |------|------|-----|
 | 1 | **Chit Chat Social** | Clear, descriptive, likely available. Keeps core brand + category. |
 | 2 | **Chitter** | Short, memorable, distinct. Easier to say and search. |
-| 3 | **ChitChat Social** | Strong brand combo: social + core name in one word. |
+| 3 | **Chit Chat** + “Social” subtitle | Same brand as #1 if the full 30-char name is taken; keep “Chit Chat Social” in the subtitle. |
 | 4 | **Chit Chat Elite** | Matches "elite social platform" positioning. Professional. |
 | 5 | **Chatter** | Very short, familiar. Could be generic but easy to remember. |
 | 6 | **Chit Chat Socials** | Plural/community feel. Slightly less common. |

@@ -43,6 +43,7 @@ npm run deploy
 - `GET /api/ops/admin/users?q=&limit=` — Firestore user directory (requires `FIREBASE_SERVICE_ACCOUNT_JSON`). Legacy `/api/admin/users`.
 - `PATCH /api/ops/admin/users/{uid}` — JSON body with allowed fields (`username`, `displayName`, `handle`, `email`, `verificationStatus`, …). Legacy `/api/admin/users/{uid}`.
 - `GET /api/ops/dashboard` — metadata / auth hint (no default PINs in JSON).
+- `GET` / `POST` / `PUT` `/api/ops/ads-config` — read or save ads program JSON in KV key `ads-program-config` (dashboard **Ads & AdSense** section). Legacy: `/api/ads-config`.
 
 ## Local dashboard (no Cloudflare)
 

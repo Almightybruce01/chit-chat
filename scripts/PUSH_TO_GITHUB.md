@@ -5,7 +5,7 @@ Your Mac is ready: **git is initialized** and **first commit is done**.
 ## 1. Create the repo
 
 1. Open https://github.com/new  
-2. Repository name: e.g. `chit-chat`  
+2. Repository name: e.g. `chit-chat` (slug can stay short; **Description** should say **Chit Chat Social**)  
 3. **Do not** add README, .gitignore, or license (empty repo)  
 4. Click **Create repository**
 

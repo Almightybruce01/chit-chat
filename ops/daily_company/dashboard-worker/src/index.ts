@@ -1,6 +1,9 @@
 import dashboardHtml from "../static/index.html";
 import type { Env } from "./env";
 import { getFirestoreAccessToken, listUsers, patchUserDocument } from "./firestore";
+
+/** KV key for ops-editable ads / AdSense program flags (JSON object). */
+const ADS_PROGRAM_KV_KEY = "ads-program-config";
 import {
   clearOpsFailuresForRequest,
   compareOpsPin,
@@ -239,6 +242,99 @@ async function handleAdminUserPatch(request: Request, env: Env, uid: string): Pr
   return json({ ok: true }, 200, { "cache-control": "no-store" });
 }
 
+const defaultAdsProgramConfig = {
+  version: 1,
+  updatedAt: null as string | null,
+  nativeSponsoredFeedEnabled: true,
+  sponsorDisclosureLabel: "Sponsored",
+  adsense: {
+    note:
+      "Google AdSense runs on web properties you control (marketing site, help center, future web app). Paste your approved snippet only there — not inside native iOS. Use this JSON to record slot IDs / notes for your team.",
+    webPublisherIdPlaceholder: "",
+    policyUrl: "https://support.google.com/adsense/answer/48182",
+  },
+};
+
+/** Safe subset for native clients (no ops secrets, no internal notes). */
+const defaultPublicAdsFlags = {
+  version: 1,
+  nativeSponsoredFeedEnabled: true,
+  sponsorDisclosureLabel: "Sponsored",
+};
+
+function mergePublicAdsFlags(fromKv: unknown): typeof defaultPublicAdsFlags {
+  const out = { ...defaultPublicAdsFlags };
+  if (!fromKv || typeof fromKv !== "object" || Array.isArray(fromKv)) return out;
+  const o = fromKv as Record<string, unknown>;
+  if (typeof o.version === "number" && Number.isFinite(o.version)) out.version = o.version;
+  if (typeof o.nativeSponsoredFeedEnabled === "boolean") out.nativeSponsoredFeedEnabled = o.nativeSponsoredFeedEnabled;
+  if (typeof o.sponsorDisclosureLabel === "string" && o.sponsorDisclosureLabel.length <= 80) {
+    out.sponsorDisclosureLabel = o.sponsorDisclosureLabel;
+  }
+  return out;
+}
+
+async function handlePublicAdsFlags(env: Env): Promise<Response> {
+  const headers: Record<string, string> = {
+    "cache-control": "public, max-age=60",
+    "access-control-allow-origin": "*",
+  };
+  if (!env.REPORT_KV) {
+    return json({ ok: true, flags: defaultPublicAdsFlags, source: "default" }, 200, headers);
+  }
+  const raw = await env.REPORT_KV.get(ADS_PROGRAM_KV_KEY);
+  if (!raw) {
+    return json({ ok: true, flags: defaultPublicAdsFlags, source: "default" }, 200, headers);
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return json({ ok: true, flags: mergePublicAdsFlags(parsed), source: "kv" }, 200, headers);
+  } catch {
+    return json({ ok: true, flags: defaultPublicAdsFlags, source: "kv_invalid_fallback" }, 200, headers);
+  }
+}
+
+async function handleAdsProgramConfig(request: Request, env: Env): Promise<Response> {
+  const deny = await requireOpsAccess(request, env, verifyCookieSession);
+  if (deny) return deny;
+
+  if (!env.REPORT_KV) {
+    return json({ ok: false, error: "kv_not_bound" }, 503, { "cache-control": "no-store" });
+  }
+
+  if (request.method === "GET") {
+    const raw = await env.REPORT_KV.get(ADS_PROGRAM_KV_KEY);
+    if (!raw) {
+      return json({ ok: true, config: defaultAdsProgramConfig, source: "default" }, 200, {
+        "cache-control": "no-store",
+      });
+    }
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return json({ ok: true, config: parsed, source: "kv" }, 200, { "cache-control": "no-store" });
+    } catch {
+      return json({ ok: false, error: "ads_config_invalid_json_in_kv" }, 502, { "cache-control": "no-store" });
+    }
+  }
+
+  if (request.method === "POST" || request.method === "PUT") {
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return json({ ok: false, error: "bad_json" }, 400, { "cache-control": "no-store" });
+    }
+    const serialized = JSON.stringify(body ?? {});
+    if (serialized.length > 100_000) {
+      return json({ ok: false, error: "payload_too_large" }, 413, { "cache-control": "no-store" });
+    }
+    await env.REPORT_KV.put(ADS_PROGRAM_KV_KEY, serialized);
+    return json({ ok: true }, 200, { "cache-control": "no-store" });
+  }
+
+  return json({ ok: false, error: "method_not_allowed" }, 405, { "cache-control": "no-store" });
+}
+
 function opsDashboardMeta(): Response {
   return json(
     {
@@ -275,7 +371,7 @@ export default {
       return new Response(null, {
         headers: {
           "Access-Control-Allow-Origin": url.origin,
-          "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
+          "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, OPTIONS",
           "Access-Control-Allow-Headers": corsOpsHeaders,
           "Access-Control-Max-Age": "86400",
         },
@@ -310,6 +406,14 @@ export default {
       return proxyJson(request, env, "history");
     }
 
+    if (path === "/api/ops/ads-config" && (request.method === "GET" || request.method === "POST" || request.method === "PUT")) {
+      return handleAdsProgramConfig(request, env);
+    }
+
+    if (path === "/api/public/ads-flags" && request.method === "GET") {
+      return handlePublicAdsFlags(env);
+    }
+
     if (path === "/api/ops/admin/users" && request.method === "GET") {
       return handleAdminUsers(request, env, url);
     }
@@ -327,6 +431,9 @@ export default {
     }
     if (path === "/api/latest-report" && request.method === "GET") return proxyJson(request, env, "report");
     if (path === "/api/history-export" && request.method === "GET") return proxyJson(request, env, "history");
+    if (path === "/api/ads-config" && (request.method === "GET" || request.method === "POST" || request.method === "PUT")) {
+      return handleAdsProgramConfig(request, env);
+    }
     if (path === "/api/admin/users" && request.method === "GET") return handleAdminUsers(request, env, url);
     const patchLegacy = path.match(/^\/api\/admin\/users\/([^/]+)$/);
     if (patchLegacy && request.method === "PATCH") return handleAdminUserPatch(request, env, patchLegacy[1]);

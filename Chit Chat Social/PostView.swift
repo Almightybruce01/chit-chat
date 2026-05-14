@@ -56,6 +56,10 @@ struct PostView: View {
     @State private var tagHandlesInput = ""
     @State private var combinedTargetHandle = ""
     @State private var requestCombinedPosting = false
+    @State private var publishAsSponsoredAd = false
+    @State private var postSponsorBrandHandle = ""
+    @State private var postSponsorExternalURL = ""
+    @State private var adProductNote = ""
 
     private var primaryText: Color { BrandPalette.adaptiveTextPrimary(for: colorScheme) }
     private var secondaryText: Color { BrandPalette.adaptiveTextSecondary(for: colorScheme) }
@@ -63,6 +67,14 @@ struct PostView: View {
 
     /// Reels and short clips must include video bytes; stories and posts can use photo-only or caption-only flows.
     private var publishBlockedReason: String? {
+        if publishAsSponsoredAd {
+            if !appState.canRunPaidAds {
+                return "Sponsored posts need Profile → Ad account (or verified business) and branded promos on. Set Launch Settings → Partner program flags URL for the remote switch."
+            }
+            if postSponsorBrandHandle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return "Add the paying brand’s @handle for sponsored posts."
+            }
+        }
         switch selectedType {
         case .reel, .shortVideo:
             if selectedVideoData == nil || selectedVideoData?.isEmpty == true {
@@ -426,6 +438,35 @@ struct PostView: View {
                     TextField("Combined target handle (@username)", text: $combinedTargetHandle)
                         .textFieldStyle(EliteTextFieldStyle())
                 }
+                if appState.canRunPaidAds {
+                    Toggle("Sponsored post (paid partnership)", isOn: $publishAsSponsoredAd)
+                        .foregroundStyle(primaryText)
+                    if publishAsSponsoredAd {
+                        TextField("Paying brand @handle", text: $postSponsorBrandHandle)
+                            .textFieldStyle(EliteTextFieldStyle())
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        TextField("Optional https:// offer link", text: $postSponsorExternalURL)
+                            .textFieldStyle(EliteTextFieldStyle())
+                            .textInputAutocapitalization(.never)
+                            .keyboardType(.URL)
+                            .autocorrectionDisabled()
+                        TextField("Product or offer (feeds AI-style caption)", text: $adProductNote)
+                            .textFieldStyle(EliteTextFieldStyle())
+                        Button {
+                            caption = appState.suggestedAdCopy(for: adProductNote, sponsorBrandHandle: postSponsorBrandHandle)
+                        } label: {
+                            Text("Generate AI-style ad copy")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color.orange.opacity(0.9))
+                        Text("#ad is added when the brand handle is set. Users can tap through to the brand profile or offer link.")
+                            .font(.caption2)
+                            .foregroundStyle(secondaryText)
+                    }
+                }
             }
         }
     }
@@ -465,6 +506,11 @@ struct PostView: View {
                     Text("Combined request: \(combinedTargetHandle.isEmpty ? "No target yet" : combinedTargetHandle)")
                         .font(.caption)
                         .foregroundStyle(secondaryText)
+                }
+                if publishAsSponsoredAd, appState.canRunPaidAds {
+                    Text("Sponsored · \(postSponsorBrandHandle.isEmpty ? "set brand handle" : postSponsorBrandHandle)")
+                        .font(.caption)
+                        .foregroundStyle(Color.orange.opacity(0.95))
                 }
                 if let selectedPhotoData, let image = UIImage(data: selectedPhotoData) {
                     Image(uiImage: image)
@@ -518,7 +564,10 @@ struct PostView: View {
                 areCommentsHidden: hideCommentsForPost || appState.hideCommentCountsByDefault,
                 blockNudity: blockNudityContent,
                 surfaceStyle: selectedType == .story ? .chit : surfaceStyle,
-                taggedHandles: appState.parseTaggedHandles(from: tagHandlesInput)
+                taggedHandles: appState.parseTaggedHandles(from: tagHandlesInput),
+                isSponsoredAd: publishAsSponsoredAd,
+                sponsorBrandHandle: postSponsorBrandHandle,
+                sponsorExternalURL: postSponsorExternalURL
             )
             if requestCombinedPosting && !combinedTargetHandle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 let combinedOK = appState.requestCombinedPost(
@@ -540,7 +589,7 @@ struct PostView: View {
                 }
             }
             isUploading = false
-            if result.label != .blockedNudity && result.label != .missingRequiredMedia && result.label != .accountSuspended {
+            if result.label != .blockedNudity && result.label != .missingRequiredMedia && result.label != .accountSuspended && result.label != .sponsoredNotEligible {
                 caption = ""
                 selectedPhotoData = nil
                 selectedVideoData = nil
@@ -552,6 +601,10 @@ struct PostView: View {
                 tagHandlesInput = ""
                 combinedTargetHandle = ""
                 requestCombinedPosting = false
+                publishAsSponsoredAd = false
+                postSponsorBrandHandle = ""
+                postSponsorExternalURL = ""
+                adProductNote = ""
                 currentStep = .media
             }
         }
@@ -582,6 +635,9 @@ struct PostView: View {
         combinedTargetHandle = ""
         requestCombinedPosting = false
         isCollabEnabled = true
+        publishAsSponsoredAd = false
+        postSponsorBrandHandle = ""
+        postSponsorExternalURL = ""
         publishStatus = ""
         currentStep = .media
     }

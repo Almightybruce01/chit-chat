@@ -28,8 +28,8 @@ Chit Chat Social is a social app concept focused on creator content, direct mess
 
 ## Repository scope (keep projects separate)
 
-- **This repo is only Chit Chat Social.** Remote: `https://github.com/Almightybruce01/chit-chat` — do not mix in other products, sites, or unrelated documentation here; use separate repositories for anything else.
-- **Chit Chat Social** uses its **own** GitHub repo name `chit-chat` so Firebase, bundle IDs, Pages URLs, and marketing stay isolated from other apps.
+- **This repo is only the Chit Chat Social app** (App Store / product name: **Chit Chat Social**). GitHub remote: `https://github.com/Almightybruce01/chit-chat` — do not mix in other products, sites, or unrelated documentation here; use separate repositories for anything else.
+- The GitHub repo slug (`chit-chat`) can differ from the app name; set the repo **Description** and **About** on GitHub to **Chit Chat Social** so the project page matches the brand.
 - Using GitHub for source control and optional **GitHub Pages** for repo docs is fine; just attach **this** repo’s Pages to **this** repo’s URL — don’t point another product’s custom domain here unless you mean to.
 - Chat room prototypes:
   - 1-on-1 call

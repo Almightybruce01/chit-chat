@@ -183,7 +183,7 @@ struct SocialMarketplaceView: View {
                         .font(.headline)
                         .foregroundStyle(appState.isLiveNow ? .red : BrandPalette.adaptiveTextSecondary(for: colorScheme))
                     Spacer()
-                    Text("\(appState.liveViewerCount) viewers")
+                    Text("\(appState.liveViewerCount(for: appState.currentUser.handle)) watching")
                         .font(.caption.bold())
                         .foregroundStyle(BrandPalette.neonGreen)
                 }
@@ -192,7 +192,7 @@ struct SocialMarketplaceView: View {
                         if appState.isLiveNow {
                             appState.endLiveSession()
                         } else {
-                            appState.startLiveSession(headline: "Marketplace Live")
+                            appState.scheduleStartLiveSession(headline: "Marketplace Live")
                         }
                     }
                     .buttonStyle(NeonPrimaryButtonStyle())
@@ -205,12 +205,12 @@ struct SocialMarketplaceView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Live comments")
                         .font(.caption.bold())
-                    if appState.liveComments.isEmpty {
+                    if appState.liveCommentsThread(for: appState.currentUser.handle).isEmpty {
                         Text("No comments yet.")
                             .font(.caption)
                             .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
                     } else {
-                        ForEach(appState.liveComments.prefix(8)) { item in
+                        ForEach(appState.liveCommentsThread(for: appState.currentUser.handle).prefix(8)) { item in
                             Text("\(item.authorHandle): \(item.text)")
                                 .font(.caption)
                         }
@@ -224,7 +224,33 @@ struct SocialMarketplaceView: View {
                         liveCommentDraft = ""
                     }
                     .buttonStyle(NeonPrimaryButtonStyle())
-                    .disabled(liveCommentDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!appState.isLiveNow || liveCommentDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                if !appState.otherLiveHostHandles().isEmpty {
+                    Divider().padding(.vertical, 6)
+                    Text("Watching others")
+                        .font(.caption.bold())
+                        .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+                    ForEach(appState.otherLiveHostHandles(), id: \.self) { host in
+                        HStack(spacing: 10) {
+                            LiveStoryBadge()
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(host)
+                                    .font(.subheadline.bold())
+                                if let title = appState.liveSession(for: host)?.headline {
+                                    Text(title)
+                                        .font(.caption2)
+                                        .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+                                        .lineLimit(1)
+                                }
+                            }
+                            Spacer()
+                            Button("Join") {
+                                appState.joinLiveSession(host: host)
+                            }
+                            .buttonStyle(NeonPrimaryButtonStyle())
+                        }
+                    }
                 }
             }
         }
@@ -481,19 +507,19 @@ struct FullStoreView: View {
                         .font(.headline)
                         .foregroundStyle(appState.isLiveNow ? .red : BrandPalette.adaptiveTextSecondary(for: colorScheme))
                     Spacer()
-                    Text("\(appState.liveViewerCount) viewers")
+                    Text("\(appState.liveViewerCount(for: appState.currentUser.handle)) watching")
                         .font(.caption.bold())
                         .foregroundStyle(BrandPalette.neonGreen)
                 }
                 HStack(spacing: 8) {
                     Button(appState.isLiveNow ? "End Live" : "Go Live") {
                         if appState.isLiveNow { appState.endLiveSession() }
-                        else { appState.startLiveSession(headline: "Store Live") }
+                        else { appState.scheduleStartLiveSession(headline: "Store Live") }
                     }
                     .buttonStyle(NeonPrimaryButtonStyle())
                 }
-                if !appState.liveComments.isEmpty {
-                    ForEach(appState.liveComments.prefix(8)) { c in
+                if !appState.liveCommentsThread(for: appState.currentUser.handle).isEmpty {
+                    ForEach(appState.liveCommentsThread(for: appState.currentUser.handle).prefix(8)) { c in
                         Text("\(c.authorHandle): \(c.text)").font(.caption)
                     }
                 }
@@ -505,7 +531,21 @@ struct FullStoreView: View {
                         liveCommentDraft = ""
                     }
                     .buttonStyle(NeonPrimaryButtonStyle())
-                    .disabled(liveCommentDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(!appState.isLiveNow || liveCommentDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+                if !appState.otherLiveHostHandles().isEmpty {
+                    Divider().padding(.vertical, 6)
+                    Text("Other lives")
+                        .font(.caption.bold())
+                    ForEach(appState.otherLiveHostHandles(), id: \.self) { host in
+                        HStack {
+                            LiveStoryBadge()
+                            Text(host).font(.subheadline.bold())
+                            Spacer()
+                            Button("Join") { appState.joinLiveSession(host: host) }
+                                .buttonStyle(.borderedProminent)
+                        }
+                    }
                 }
             }
         }
@@ -519,6 +559,130 @@ struct FullStoreView: View {
                 Text("Explore products and local deals.")
                     .font(.caption)
                     .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+            }
+        }
+    }
+}
+
+/// Instagram-style viewer sheet: join / leave + chat for a host’s live.
+struct LiveBroadcastViewerSheet: View {
+    let hostHandle: String
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+    @State private var commentDraft = ""
+
+    private var host: String { appState.normalizedSocialHandle(hostHandle) }
+    private var session: LiveBroadcastSession? { appState.liveSession(for: host) }
+    private var isHost: Bool {
+        appState.normalizedSocialHandle(appState.currentUser.handle) == host
+    }
+    private var isAudience: Bool { appState.liveAudienceHost == host }
+
+    var body: some View {
+        ZStack {
+            EliteBackground()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 8) {
+                                LiveStoryBadge()
+                                Text(host)
+                                    .font(.title3.bold())
+                            }
+                            if let s = session {
+                                Text(s.headline)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("This live has ended.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                    }
+
+                    HStack {
+                        Label("\(appState.liveViewerCount(for: host)) watching", systemImage: "eye.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(BrandPalette.neonGreen)
+                        Spacer()
+                    }
+
+                    if isHost {
+                        Text("You’re broadcasting — manage controls in Market → Live Shop, or end live there.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else if session != nil {
+                        HStack(spacing: 10) {
+                            if isAudience {
+                                Button("Leave live") {
+                                    appState.leaveLiveSessionAsViewer()
+                                    dismiss()
+                                    appState.dismissLiveRoom()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.red.opacity(0.9))
+                            } else {
+                                Button("Join live") {
+                                    appState.joinLiveSession(host: host)
+                                }
+                                .buttonStyle(NeonPrimaryButtonStyle())
+                            }
+                        }
+                    }
+
+                    Divider()
+
+                    Text("Comments")
+                        .font(.headline)
+
+                    if let s = session {
+                        if s.comments.isEmpty {
+                            Text("No comments yet.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(s.comments.prefix(40)) { item in
+                                Text("\(item.authorHandle): \(item.text)")
+                                    .font(.subheadline)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        TextField("Say something…", text: $commentDraft, axis: .vertical)
+                            .lineLimit(1...3)
+                            .textFieldStyle(EliteTextFieldStyle())
+                        Button("Send") {
+                            appState.postLiveComment(commentDraft)
+                            commentDraft = ""
+                        }
+                        .buttonStyle(NeonPrimaryButtonStyle())
+                        .disabled(
+                            commentDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                || (!isHost && !isAudience)
+                        )
+                    }
+                    if !isHost && !isAudience, session != nil {
+                        Text("Join the live to comment.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .padding()
+            }
+        }
+        .navigationTitle("Live")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Done") {
+                    dismiss()
+                    appState.dismissLiveRoom()
+                }
             }
         }
     }

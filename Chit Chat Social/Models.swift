@@ -254,6 +254,10 @@ struct UserProfile: Identifiable, Codable {
     let id: UUID
     var username: String
     var handle: String
+    /// Personal / login contact email (required for password sign-up). Sign in with Apple may start as a `…@pending.chitchat` placeholder until updated in Profile.
+    var accountEmail: String = ""
+    /// E.164-style storage: digits only (required for password sign-up). Apple-only sign-in may start as `0000000000` until updated in Profile.
+    var accountPhone: String = ""
     var enterpriseAlias: String
     var displayName: String
     var profileQuote: String = ""
@@ -265,6 +269,8 @@ struct UserProfile: Identifiable, Codable {
     var linkedPlatforms: [SocialPlatform]
     /// Business accounts must be approved to post jobs.
     var isBusinessAccount: Bool = false
+    /// Brand / agency / creator promo account — can run in-feed sponsored posts & paid reshares.
+    var isAdAccount: Bool = false
     var businessJobPostingApproved: Bool = false
     /// U.S. EIN formatted as XX-XXXXXXX when provided.
     var businessEIN: String = ""
@@ -276,6 +282,8 @@ struct UserProfile: Identifiable, Codable {
     var businessZIP: String = ""
     var businessPhone: String = ""
     var businessWebsite: String = ""
+    /// Firebase Authentication UID when signed in (empty for guest / local test users).
+    var firebaseUserId: String = ""
 }
 
 struct PostItem: Identifiable, Codable {
@@ -303,6 +311,13 @@ struct PostItem: Identifiable, Codable {
     var combinedOwnerHandle: String? = nil
     /// When true, feed shows an opaque warning before revealing caption/media (violent news / graphic).
     var violenceWarningRequired: Bool = false
+    /// In-feed sponsored placement: paying brand handle (tap-through to profile / site).
+    var isSponsoredAd: Bool = false
+    var sponsorBrandHandle: String = ""
+    /// Optional HTTPS landing page (offer, App Store, etc.).
+    var sponsorExternalURL: String = ""
+    /// When this post is a paid reshare, links to the organic post it wraps.
+    var sponsoredSourcePostID: UUID? = nil
 }
 
 struct CombinedPostRequest: Identifiable, Codable {
@@ -346,6 +361,16 @@ enum ActivityType: String, Codable, CaseIterable, Hashable {
     case verification
     /// Trust & safety — strikes, suspensions, policy email confirmations.
     case moderation
+}
+
+/// In-app user report of objectionable content (Guideline 1.2).
+struct UserContentReport: Identifiable, Codable, Equatable {
+    var id: UUID
+    let postID: UUID
+    let reporterHandle: String
+    let authorHandle: String
+    let reason: String
+    let createdAt: Date
 }
 
 struct ActivityItem: Identifiable, Codable {
@@ -532,6 +557,13 @@ struct LiveCommentItem: Identifiable, Codable {
     var authorHandle: String
     var text: String
     var createdAt: Date
+}
+
+/// One creator’s live room (viewers + chat). Keyed by normalized @handle in `AppState.liveSessionsByHost`.
+struct LiveBroadcastSession {
+    var headline: String
+    var viewerHandles: Set<String>
+    var comments: [LiveCommentItem]
 }
 
 enum SocialLiveAudienceRole: String, CaseIterable, Codable, Identifiable {

@@ -201,7 +201,7 @@ Then **Submit for Review**.
 
 **Chit Chat Social** includes an **admin dashboard inside the iOS app** (not the static HTML AI dashboard):
 
-- **Who can access:** accounts whose **username** (lowercased) is one of: `almighty_bruce_`, `admin`, `owner` (see `AppState.canAccessInternalDashboard`).  
+- **Who can access:** Firebase users who have a document at **`admin_users/{theirAuthUid}`** in Firestore (create the doc in **Firebase Console → Firestore**; the app sets `AppState.isInternalAdminCache` after sign-in).  
 - **Where:** **Profile** → **Chit Chat Social admin**, or **Corporate** hub → **Open Chit Chat Social admin**.  
 - **Features:** auto-verification pass (IG signal), verification queue, **search all users**, **rename username**, **remove user from local directory**, grant official / paid verification.
 

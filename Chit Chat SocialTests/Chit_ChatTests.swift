@@ -17,9 +17,15 @@ struct Chit_ChatTests {
         let username = "test_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8))"
         let password = "Password123"
 
-        let signUpError = appState.signUp(username: username, password: password)
+        let signUpError = appState.signUpLocalForTesting(
+            username: username,
+            password: password,
+            accountEmail: "\(username)@test.local",
+            accountPhone: "5551234567"
+        )
         #expect(signUpError == nil)
         #expect(appState.session?.isAuthenticated == true)
+        #expect(appState.firebaseSignedInUID != nil)
         #expect(appState.session?.username.lowercased() == username.lowercased())
     }
 
@@ -27,7 +33,12 @@ struct Chit_ChatTests {
     @Test func repostIsIdempotentPerUser() async throws {
         let appState = AppState(backend: LocalBackendService())
         let uniqueUser = "repost_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(8))"
-        _ = appState.signUp(username: uniqueUser, password: "Password123")
+        _ = appState.signUpLocalForTesting(
+            username: uniqueUser,
+            password: "Password123",
+            accountEmail: "\(uniqueUser)@test.local",
+            accountPhone: "5559876543"
+        )
         let postID = try #require(appState.posts.first?.id)
         let initialSource = try #require(appState.posts.first(where: { $0.id == postID }))
         let initialRepostCount = initialSource.repostCount
@@ -61,10 +72,20 @@ struct Chit_ChatTests {
     @Test func profilePhotoIsScopedByAccount() async throws {
         let appState = AppState(backend: LocalBackendService())
 
-        _ = appState.signUp(username: "alice_user", password: "Password123")
+        _ = appState.signUpLocalForTesting(
+            username: "alice_user",
+            password: "Password123",
+            accountEmail: "alice_user@test.local",
+            accountPhone: "5551112233"
+        )
         appState.setProfilePhoto(data: Data([0x1, 0x2, 0x3]))
 
-        _ = appState.signUp(username: "bob_user", password: "Password123")
+        _ = appState.signUpLocalForTesting(
+            username: "bob_user",
+            password: "Password123",
+            accountEmail: "bob_user@test.local",
+            accountPhone: "5554445566"
+        )
         appState.setProfilePhoto(data: Data([0xA, 0xB, 0xC]))
 
         _ = appState.switchToAccount(username: "alice_user")

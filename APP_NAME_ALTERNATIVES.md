@@ -4,7 +4,7 @@
 |------|------|-----|
 | **1** | **Chit Chat Social** | Clear, descriptive, likely available. Keeps your core brand and states the category. |
 | **2** | **Chitter** | Short, memorable, distinct. Easier to say and search than "Chit Chat." |
-| **3** | **ChitChat Social** | Strong brand combo: social + your core name in one word. |
+| **3** | **Chit Chat** + “Social” subtitle | Same brand as #1 if the full name is unavailable; keep **Chit Chat Social** in the subtitle. |
 | **4** | **Chit Chat Elite** | Matches your "elite social platform" positioning. Professional, aspirational. |
 | **5** | **Chatter** | Very short, familiar word. Could be generic, but easy to remember. |
 | **6** | **Chit Chat Socials** | Same idea as "Social" but "Socials" is more plural/community-oriented. Slightly less common. |

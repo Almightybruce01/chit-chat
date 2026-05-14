@@ -3,6 +3,8 @@
  * Used only for authenticated dashboard admin routes (session cookie required at router).
  */
 
+import { CHITCHAT_FS } from "./chitchatFirestoreCollections";
+
 const OAUTH_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const FIRESTORE_SCOPE = "https://www.googleapis.com/auth/datastore";
 
@@ -132,7 +134,7 @@ export async function listUsers(
 ): Promise<{ users: Record<string, unknown>[]; nextPageToken?: string }> {
   const users: Record<string, unknown>[] = [];
   let pageToken: string | undefined;
-  const base = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/users`;
+  const base = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/${CHITCHAT_FS.users}`;
 
   for (let i = 0; i < 10; i++) {
     const u = new URL(base);
@@ -202,7 +204,7 @@ export async function patchUserDocument(
   }
   fields["updatedAt"] = { timestampValue: new Date().toISOString() };
 
-  const path = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/users/${encodeURIComponent(uid)}`;
+  const path = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/${CHITCHAT_FS.users}/${encodeURIComponent(uid)}`;
   const u = new URL(path);
   u.searchParams.append("updateMask.fieldPaths", "updatedAt");
   for (const m of mask) u.searchParams.append("updateMask.fieldPaths", m);

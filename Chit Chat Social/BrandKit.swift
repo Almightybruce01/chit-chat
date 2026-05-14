@@ -489,3 +489,24 @@ struct SnappyScaleButtonStyle: ButtonStyle {
             .animation(.easeInOut(duration: MotionTokens.quick), value: configuration.isPressed)
     }
 }
+
+/// Instagram-style compact LIVE pill for avatars & story rings.
+struct LiveStoryBadge: View {
+    var body: some View {
+        Text("LIVE")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.98, green: 0.22, blue: 0.32), Color(red: 0.92, green: 0.08, blue: 0.38)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(.white.opacity(0.42), lineWidth: 0.9))
+            .shadow(color: Color.red.opacity(0.45), radius: 6, y: 2)
+    }
+}
