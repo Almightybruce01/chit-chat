@@ -237,13 +237,28 @@ struct MainTabView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
         .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous).fill(tabBarBackgroundFill)
+            ZStack {
+                RoundedRectangle(cornerRadius: LayoutTokens.tabBarRadius, style: .continuous).fill(tabBarBackgroundFill)
+                RoundedRectangle(cornerRadius: LayoutTokens.tabBarRadius, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [
+                                Color.white.opacity(colorScheme == .light ? 0.55 : 0.18),
+                                Color.white.opacity(colorScheme == .light ? 0.08 : 0.04)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 1
+                    )
+                    .blendMode(.overlay)
+            }
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
+            RoundedRectangle(cornerRadius: LayoutTokens.tabBarRadius, style: .continuous)
                 .stroke(tabBarStrokeColor, lineWidth: 1.1)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: LayoutTokens.tabBarRadius, style: .continuous))
         .shadow(color: .black.opacity(colorScheme == .light ? 0.12 : 0.25), radius: 12, y: 4)
     }
 
@@ -264,6 +279,13 @@ struct MainTabView: View {
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(selectedTab == index ? selectedTabHighlight : .clear)
+                    .shadow(
+                        color: selectedTab == index
+                            ? BrandPalette.neonBlue.opacity(colorScheme == .light ? 0.22 : 0.35)
+                            : .clear,
+                        radius: selectedTab == index ? 10 : 0,
+                        y: 2
+                    )
             )
             .foregroundStyle(selectedTab == index ? selectedTabLabelColor : tabLabelColor)
             .contentShape(Rectangle())
@@ -295,6 +317,13 @@ struct MainTabView: View {
             .background(
                 RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(selectedTab == 4 ? selectedTabHighlight : .clear)
+                    .shadow(
+                        color: selectedTab == 4
+                            ? BrandPalette.neonBlue.opacity(colorScheme == .light ? 0.22 : 0.35)
+                            : .clear,
+                        radius: selectedTab == 4 ? 10 : 0,
+                        y: 2
+                    )
             )
             .foregroundStyle(selectedTab == 4 ? selectedTabLabelColor : tabLabelColor)
             .contentShape(Rectangle())

@@ -43,6 +43,8 @@ enum LayoutTokens {
     static let cardRadius: CGFloat = 16
     static let cardPadding: CGFloat = 16
     static let sectionGap: CGFloat = 16
+    static let tabBarRadius: CGFloat = 22
+    static let accentStrokeWidth: CGFloat = 1.15
     /// Minimum interactive target (Human Interface Guidelines).
     static let minTouchTarget: CGFloat = 44
     /// Max width for primary reading column on iPad / large phones in landscape.
@@ -62,6 +64,8 @@ enum MotionTokens {
     static let slow = 0.38
     static let spring = Animation.spring(response: 0.34, dampingFraction: 0.82)
     static let premiumSpring = Animation.spring(response: 0.42, dampingFraction: 0.86)
+    /// Tab / chrome motion — slightly slower for perceived quality.
+    static let chrome = Animation.spring(response: 0.38, dampingFraction: 0.84)
 }
 
 enum HapticTokens {
@@ -300,11 +304,11 @@ struct EliteSectionCard<Content: View>: View {
                 )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: 1.1)
             )
             .shadow(color: (colorScheme == .light ? .black : BrandPalette.neonBlue).opacity(colorScheme == .light ? 0.08 : 0.16), radius: 9, y: 3)
-            .clipShape(RoundedRectangle(cornerRadius: LayoutTokens.cardRadius))
+            .clipShape(RoundedRectangle(cornerRadius: LayoutTokens.cardRadius, style: .continuous))
     }
 }
 
@@ -336,27 +340,40 @@ struct EliteCard<Content: View>: View {
             .padding()
             .foregroundStyle(BrandPalette.adaptiveTextPrimary(for: colorScheme))
             .background(
-                LinearGradient(
-                    colors: [
-                        BrandPalette.adaptiveCardBg(for: colorScheme),
-                        BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.9)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
+                ZStack(alignment: .top) {
+                    LinearGradient(
+                        colors: [
+                            BrandPalette.adaptiveCardBg(for: colorScheme),
+                            BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.9)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(colorScheme == .light ? 0.55 : 0.14),
+                            Color.white.opacity(0)
+                        ],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                    .frame(height: 56)
+                    .frame(maxHeight: .infinity, alignment: .top)
+                    .allowsHitTesting(false)
+                }
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: 1.2)
+                RoundedRectangle(cornerRadius: LayoutTokens.cardRadius, style: .continuous)
+                    .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: LayoutTokens.accentStrokeWidth)
             )
             .shadow(
                 color: (colorScheme == .light ? .black : BrandPalette.neonBlue)
                     .opacity(colorScheme == .light ? 0.08 : 0.2),
-                radius: 12,
-                y: 4
+                radius: 14,
+                y: 5
             )
-            .shadow(color: .black.opacity(colorScheme == .light ? 0.08 : 0.25), radius: 6, y: 3)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(colorScheme == .light ? 0.06 : 0.22), radius: 8, y: 3)
+            .clipShape(RoundedRectangle(cornerRadius: LayoutTokens.cardRadius, style: .continuous))
     }
 }
 
@@ -364,24 +381,40 @@ struct NeonPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline.weight(.semibold))
-            .foregroundStyle(.black.opacity(0.86))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .foregroundStyle(Color(red: 0.06, green: 0.08, blue: 0.12))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 11)
             .background(
-                LinearGradient(
-                    colors: [BrandPalette.neonGreen, BrandPalette.neonBlue],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
+                ZStack {
+                    LinearGradient(
+                        colors: [BrandPalette.neonGreen, BrandPalette.neonBlue],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.42), Color.white.opacity(0)],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                    .blendMode(.overlay)
+                }
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(BrandPalette.glassStroke, lineWidth: 1)
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.55), BrandPalette.glassStroke.opacity(0.5)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
             )
-            .shadow(color: BrandPalette.neonBlue.opacity(configuration.isPressed ? 0.15 : 0.3), radius: 10, y: 3)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .animation(.easeInOut(duration: MotionTokens.quick), value: configuration.isPressed)
+            .shadow(color: BrandPalette.neonBlue.opacity(configuration.isPressed ? 0.2 : 0.38), radius: configuration.isPressed ? 6 : 14, y: configuration.isPressed ? 2 : 5)
+            .shadow(color: BrandPalette.neonGreen.opacity(configuration.isPressed ? 0.08 : 0.15), radius: 10, y: 3)
+            .scaleEffect(configuration.isPressed ? 0.977 : 1.0)
+            .animation(MotionTokens.premiumSpring, value: configuration.isPressed)
     }
 }
 
@@ -389,18 +422,35 @@ struct FuturisticSectionHeader: View {
     @Environment(\.colorScheme) private var colorScheme
     let title: String
     let subtitle: String?
+    var showAccentBar: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.title3.bold())
-                .foregroundStyle(colorScheme == .light ? Color.black : BrandPalette.textPrimary)
-            if let subtitle {
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(colorScheme == .light ? Color.black.opacity(0.65) : BrandPalette.textSecondary)
+        HStack(alignment: .center, spacing: 12) {
+            if showAccentBar {
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [BrandPalette.neonBlue, BrandPalette.neonGreen, BrandPalette.accentPurple.opacity(0.9)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: 5, height: 30)
+                    .shadow(color: BrandPalette.neonBlue.opacity(0.45), radius: 6, y: 2)
             }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.title3.bold())
+                    .foregroundStyle(colorScheme == .light ? Color.black : BrandPalette.textPrimary)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(colorScheme == .light ? Color.black.opacity(0.62) : BrandPalette.textSecondary)
+                }
+            }
+            Spacer(minLength: 0)
         }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -485,8 +535,9 @@ struct EnterprisePrimaryButtonStyle: ButtonStyle {
 struct SnappyScaleButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.965 : 1.0)
-            .animation(.easeInOut(duration: MotionTokens.quick), value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.88 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
+            .animation(MotionTokens.chrome, value: configuration.isPressed)
     }
 }
 

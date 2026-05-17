@@ -109,9 +109,31 @@ struct HomeView: View {
                     Button {
                         showCreate = true
                     } label: {
-                        Image(systemName: "plus.app.fill")
-                            .font(.body.weight(.semibold))
-                            .foregroundStyle(BrandPalette.neonGreen)
+                        ZStack {
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .frame(width: 36, height: 36)
+                                .overlay(
+                                    Circle()
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [BrandPalette.neonGreen.opacity(0.75), BrandPalette.neonBlue.opacity(0.65)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 1.2
+                                        )
+                                )
+                            Image(systemName: "plus.app.fill")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [BrandPalette.neonGreen, BrandPalette.neonBlue],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                        }
                     }
                     .minimumInteractiveTarget()
                     .accessibilityLabel("Create new post")
