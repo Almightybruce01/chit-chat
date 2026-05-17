@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 import AuthenticationServices
 import FirebaseAuth
 import FirebaseCore
@@ -282,7 +283,6 @@ struct LoginView: View {
                     Button(action: googleLogin) {
                         authButtonLabel(title: "Continue with Google", icon: "globe")
                     }
-                    .disabled(thirdPartyAuthDisabled)
                     if !thirdPartyAuthDisabled {
                         Text("Google may share your email with Firebase. Phone stays a placeholder until you add it in Profile.")
                             .font(.caption2)
@@ -291,26 +291,41 @@ struct LoginView: View {
                             .padding(.horizontal, 8)
                     }
 
-                    SignInWithAppleButton(
-                        onRequest: { request in
-                            request.requestedScopes = [.fullName, .email]
-                            let nonce = randomNonceString()
-                            currentNonce = nonce
-                            request.nonce = sha256(nonce)
-                        },
-                        onCompletion: { result in
-                            switch result {
-                            case .success(let auth):
-                                handleAppleLogin(auth: auth)
-                            case .failure(let error):
-                                presentAuthError("Apple sign-in failed: \(error.localizedDescription)")
+                    ZStack {
+                        SignInWithAppleButton(
+                            onRequest: { request in
+                                request.requestedScopes = [.fullName, .email]
+                                let nonce = randomNonceString()
+                                currentNonce = nonce
+                                request.nonce = sha256(nonce)
+                            },
+                            onCompletion: { result in
+                                switch result {
+                                case .success(let auth):
+                                    handleAppleLogin(auth: auth)
+                                case .failure(let error):
+                                    presentAuthError("Apple sign-in failed: \(error.localizedDescription)")
+                                }
                             }
+                        )
+                        .signInWithAppleButtonStyle(.black)
+                        .frame(height: 50)
+                        .cornerRadius(10)
+                        .allowsHitTesting(!thirdPartyAuthDisabled)
+                        if thirdPartyAuthDisabled {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.black.opacity(0.001))
+                                .frame(height: 50)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    if usernameForOAuthUnset {
+                                        presentAuthError("Enter a unique @handle above, then sign in with Apple.")
+                                    } else if authMode == .signUp && accountPortal == .business {
+                                        presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
+                                    }
+                                }
                         }
-                    )
-                    .signInWithAppleButtonStyle(.black)
-                    .frame(height: 50)
-                    .cornerRadius(10)
-                    .disabled(thirdPartyAuthDisabled)
+                    }
                     if !thirdPartyAuthDisabled {
                         Text("Apple may hide your email—we save a placeholder and your real one if Apple shares it; add phone in Profile.")
                             .font(.caption2)
@@ -650,9 +665,8 @@ struct LoginView: View {
 
         let config = GIDConfiguration(clientID: clientID)
 
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootVC = windowScene.windows.first?.rootViewController else {
-            presentAuthError("Could not find a root view controller.")
+        guard let rootVC = oauthTopViewController() else {
+            presentAuthError("Could not open Google sign-in on this device. Close other sheets and try again, or use email login below.")
             return
         }
 
@@ -869,4 +883,47 @@ struct LoginView: View {
 
         return result
     }
+}
+
+// MARK: - OAuth presentation (iPad / multi-window)
+
+private func oauthKeyWindow() -> UIWindow? {
+    let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    let foreground = scenes.filter { $0.activationState == .foregroundActive }
+    if let win = foreground.flatMap(\.windows).first(where: { $0.isKeyWindow }) {
+        return win
+    }
+    if let win = scenes.flatMap(\.windows).first(where: { $0.isKeyWindow }) {
+        return win
+    }
+    return scenes.flatMap(\.windows).first
+}
+
+private func oauthTopMost(from root: UIViewController) -> UIViewController {
+    if let presented = root.presentedViewController {
+        return oauthTopMost(from: presented)
+    }
+    if let nav = root as? UINavigationController, let visible = nav.visibleViewController {
+        return oauthTopMost(from: visible)
+    }
+    if let tab = root as? UITabBarController, let selected = tab.selectedViewController {
+        return oauthTopMost(from: selected)
+    }
+    if let split = root as? UISplitViewController {
+        if let secondary = split.viewController(for: .secondary) {
+            return oauthTopMost(from: secondary)
+        }
+        if let primary = split.viewController(for: .primary) {
+            return oauthTopMost(from: primary)
+        }
+        if let first = split.viewControllers.first {
+            return oauthTopMost(from: first)
+        }
+    }
+    return root
+}
+
+private func oauthTopViewController() -> UIViewController? {
+    guard let root = oauthKeyWindow()?.rootViewController else { return nil }
+    return oauthTopMost(from: root)
 }

@@ -1192,15 +1192,24 @@ private struct LoopingAvatarView: View {
     @State private var looper: AVPlayerLooper?
 
     var body: some View {
-        VideoPlayer(player: player)
-            .onAppear {
-                configurePlayerIfNeeded()
+        Group {
+            if let player {
+                VideoPlayer(player: player)
+            } else {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 56))
+                    .foregroundStyle(BrandPalette.neonBlue)
             }
-            .onDisappear {
-                player?.pause()
-                player = nil
-                looper = nil
-            }
+        }
+        .frame(width: 56, height: 56)
+        .onAppear {
+            configurePlayerIfNeeded()
+        }
+        .onDisappear {
+            player?.pause()
+            player = nil
+            looper = nil
+        }
     }
 
     private func configurePlayerIfNeeded() {
