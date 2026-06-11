@@ -27,8 +27,15 @@ struct SocialMarketplaceView: View {
                     VStack(spacing: 12) {
                         FuturisticSectionHeader(
                             title: "Marketplace + Commerce",
-                            subtitle: "Shop, ship, local meetups, and live commerce."
+                            subtitle: "Browse creator listings — checkout is not enabled; prices are catalog previews only."
                         )
+                        Text("No in-app checkout in this version. The only paid digital unlock is the optional Paid Verification Badge (Profile → Verification), purchased via App Store In-App Purchase.")
+                            .font(.caption)
+                            .foregroundStyle(BrandPalette.adaptiveTextSecondary(for: colorScheme))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.88))
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         tabRail
 
                         switch tab {

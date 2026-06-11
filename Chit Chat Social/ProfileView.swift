@@ -11,8 +11,12 @@ import AVKit
 
 struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.storeKit) private var storeKit
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.openURL) private var openURL
+    @State private var profileContentReady = false
+    @State private var postsSectionReady = false
     @State private var selectedTab = "Chit"
     @State private var showBadgeInfo = false
     @State private var showAccountTools = false
@@ -54,8 +58,18 @@ struct ProfileView: View {
             ZStack {
                 EliteBackground()
                 ScrollView {
-                    profileMainColumn
+                    Group {
+                        if profileContentReady {
+                            profileMainColumn
+                        } else {
+                            ProgressView("Loading profile…")
+                                .padding(.top, 80)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
                         .padding(.top, 4)
+                        .frame(maxWidth: LayoutTokens.readableMaxWidth)
+                        .frame(maxWidth: .infinity)
                 }
                 .scrollIndicators(.visible)
                 .contentMargins(.bottom, 28, for: .scrollContent)
@@ -267,6 +281,18 @@ struct ProfileView: View {
                 aliasDraft = appState.currentUser.enterpriseAlias
                 displayNameDraft = appState.currentUser.displayName
                 profileLinkDraft = appState.currentUser.profileLinkURL
+                if !profileContentReady {
+                    Task { @MainActor in
+                        await Task.yield()
+                        profileContentReady = true
+                        try? await Task.sleep(for: .milliseconds(120))
+                        postsSectionReady = true
+                    }
+                }
+            }
+            .onDisappear {
+                profileContentReady = false
+                postsSectionReady = false
             }
             .onChange(of: appState.currentUser.username) { _, _ in
                 quoteDraft = appState.currentUser.profileQuote
@@ -309,11 +335,34 @@ struct ProfileView: View {
         case .verifiedInternal:
             return "Official verification is internally approved by your admin team."
         case .paid:
-            return "This is a paid verification badge. It is public and marked as paid."
+            return "Paid verification badge — purchased via App Store In-App Purchase. Separate from free official verification."
         case .pending:
             return "Verification is pending internal review."
         case .unverified:
             return "No badge yet. You can request paid or official verification."
+        }
+    }
+
+    @ViewBuilder
+    private var selectedProfilePostsContent: some View {
+        // Single static container — avoids paged TabView inside ScrollView (iPad crash during review).
+        switch selectedTab {
+        case "Chit":
+            postsGrid(Array(chitPosts.prefix(9)))
+        case "Chat":
+            postsGrid(chatPosts)
+        case "Reposts":
+            postsGrid(repostPosts)
+        case "Combined":
+            listContainer {
+                combinedPostSection
+            }
+        case "Reels":
+            postsGrid(reelPosts)
+        case "Tagged":
+            postsGrid(taggedPosts)
+        default:
+            postsGrid(Array(chitPosts.prefix(9)))
         }
     }
 
@@ -375,29 +424,27 @@ struct ProfileView: View {
 
     @ViewBuilder
     private var storyBubbleSections: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 10) {
-                storyBubble(title: "Stories", system: "plus.circle.fill", tint: BrandPalette.neonBlue) {
-                    showAvatarStory = true
-                }
-                storyBubble(title: "Highlights", system: "play.circle.fill", tint: BrandPalette.neonGreen) {
-                    selectedTab = "Reels"
-                }
-                storyBubble(title: "Old Stories", system: "clock.arrow.circlepath", tint: BrandPalette.accentPurple) {
-                    showVideoBubbleDialog = true
-                }
-                storyBubble(title: "Tagged", system: "at", tint: BrandPalette.accentPink) {
-                    selectedTab = "Tagged"
-                }
+        HStack(spacing: 10) {
+            storyBubble(title: "Stories", system: "plus.circle.fill", tint: BrandPalette.neonBlue) {
+                showAvatarStory = true
             }
-            .padding(.horizontal)
+            storyBubble(title: "Highlights", system: "play.circle.fill", tint: BrandPalette.neonGreen) {
+                selectedTab = "Reels"
+            }
+            storyBubble(title: "Old Stories", system: "clock.arrow.circlepath", tint: BrandPalette.accentPurple) {
+                showVideoBubbleDialog = true
+            }
+            storyBubble(title: "Tagged", system: "at", tint: BrandPalette.accentPink) {
+                selectedTab = "Tagged"
+            }
         }
+        .padding(.horizontal)
     }
 
     /// Split out main column to keep `body` type-checking fast.
     @ViewBuilder
     private var profileMainColumn: some View {
-            VStack(spacing: 12) {
+            LazyVStack(spacing: 12) {
                 profileHeroCard
                 if appState.session?.isAuthenticated == true && appState.needsContactInfoUpdate {
                     Button {
@@ -516,31 +563,7 @@ struct ProfileView: View {
                     .padding(.horizontal)
                 }
 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(tabs, id: \.self) { tab in
-                            Button(tab) {
-                                withAnimation(MotionTokens.spring) {
-                                    selectedTab = tab
-                                }
-                            }
-                            .buttonStyle(.plain)
-                            .font(.caption.bold())
-                            .padding(.horizontal, 11)
-                            .padding(.vertical, 7)
-                            .background(
-                                Capsule()
-                                    .fill(selectedTab == tab ? BrandPalette.neonBlue.opacity(0.28) : BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.86))
-                            )
-                            .overlay(
-                                Capsule()
-                                    .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme).opacity(selectedTab == tab ? 0.8 : 0.5), lineWidth: 1)
-                            )
-                            .foregroundStyle(primaryText)
-                        }
-                    }
-                    .padding(.horizontal)
-                }
+                profileTabSelector
 
                 HStack {
                     Spacer()
@@ -666,20 +689,15 @@ struct ProfileView: View {
                     .padding(.horizontal)
                 }
 
-                TabView(selection: $selectedTab) {
-                    postsGrid(Array(chitPosts.prefix(9))).tag("Chit")
-                    postsGrid(chatPosts).tag("Chat")
-                    postsGrid(repostPosts).tag("Reposts")
-                    listContainer {
-                        combinedPostSection
-                    }.tag("Combined")
-                    postsGrid(reelPosts).tag("Reels")
-                    postsGrid(taggedPosts).tag("Tagged")
+                if postsSectionReady {
+                    selectedProfilePostsContent
+                        .frame(minHeight: 220)
+                } else {
+                    ProgressView("Loading posts…")
+                        .frame(maxWidth: .infinity, minHeight: 220)
                 }
-                .frame(minHeight: 360, idealHeight: 420, maxHeight: 560)
-                .tabViewStyle(.page(indexDisplayMode: .never))
 
-                if selectedTab == "Tagged", !appState.hiddenTaggedPostIDs.isEmpty {
+                if postsSectionReady, selectedTab == "Tagged", !appState.hiddenTaggedPostIDs.isEmpty {
                     HStack {
                         Text("\(appState.hiddenTaggedPostIDs.count) tagged posts hidden")
                             .font(.caption2)
@@ -716,16 +734,22 @@ struct ProfileView: View {
                 .padding(.horizontal)
                 .foregroundStyle(primaryText)
 
-                Toggle("Hide likes count by default on new posts", isOn: $appState.hideLikeCountsByDefault)
+                Toggle("Hide likes count by default on new posts", isOn: Binding(
+                    get: { appState.hideLikeCountsByDefault },
+                    set: { appState.hideLikeCountsByDefault = $0 }
+                ))
                     .padding(.horizontal)
                     .foregroundStyle(primaryText)
 
-                Toggle("Hide comments count by default on new posts", isOn: $appState.hideCommentCountsByDefault)
+                Toggle("Hide comments count by default on new posts", isOn: Binding(
+                    get: { appState.hideCommentCountsByDefault },
+                    set: { appState.hideCommentCountsByDefault = $0 }
+                ))
                     .padding(.horizontal)
                     .foregroundStyle(primaryText)
 
                 Toggle(
-                    "Ad account (run in-feed sponsored posts & paid reshares)",
+                    "Ad account tools (sponsored posts — ops-gated, not an IAP product)",
                     isOn: Binding(
                         get: { appState.currentUser.isAdAccount },
                         set: { appState.setAdAccountEnabled($0) }
@@ -738,9 +762,23 @@ struct ProfileView: View {
                     DisclosureGroup("Account Tools", isExpanded: $showAccountTools) {
                         VStack(spacing: 8) {
                             NavigationLink(destination: VerificationView().environmentObject(appState)) {
-                                Label("Verification request", systemImage: "checkmark.seal")
+                                Label("Verification & paid badge (IAP)", systemImage: "checkmark.seal")
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
+                            Button {
+                                Task {
+                                    await storeKit.restorePurchases()
+                                    appState.syncPaidVerificationEntitlement(active: storeKit.hasPaidVerification)
+                                }
+                            } label: {
+                                Label(
+                                    storeKit.isRestoring ? "Restoring purchases…" : "Restore App Store purchases",
+                                    systemImage: "arrow.clockwise"
+                                )
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(storeKit.isRestoring)
                             NavigationLink(destination: LaunchSettingsView().environmentObject(appState)) {
                                 Label("Launch settings center", systemImage: "gearshape.2.fill")
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -966,6 +1004,50 @@ struct ProfileView: View {
         .buttonStyle(SnappyScaleButtonStyle())
     }
 
+    @ViewBuilder
+    private var profileTabSelector: some View {
+        if horizontalSizeClass == .regular {
+            Picker("Posts section", selection: $selectedTab) {
+                ForEach(tabs, id: \.self) { tab in
+                    Text(tab).tag(tab)
+                }
+            }
+            .pickerStyle(.menu)
+            .padding(.horizontal)
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(tabs, id: \.self) { tab in
+                        Button(tab) {
+                            withAnimation(MotionTokens.spring) {
+                                selectedTab = tab
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .font(.caption.bold())
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
+                        .background(
+                            Capsule()
+                                .fill(selectedTab == tab ? BrandPalette.neonBlue.opacity(0.28) : BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.86))
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme).opacity(selectedTab == tab ? 0.8 : 0.5), lineWidth: 1)
+                        )
+                        .foregroundStyle(primaryText)
+                    }
+                }
+                .padding(.horizontal)
+            }
+        }
+    }
+
+    private func safeUIImage(from data: Data) -> UIImage? {
+        guard !data.isEmpty else { return nil }
+        return UIImage(data: data)
+    }
+
     private var displayHandle: String {
         if appState.mode == .enterprise && !appState.currentUser.allowEnterpriseReveal {
             return appState.currentUser.enterpriseAlias
@@ -1030,25 +1112,31 @@ struct ProfileView: View {
 
     @ViewBuilder
     private var avatarVisual: some View {
-        if let loopVideo = appState.profileLoopVideoData, !loopVideo.isEmpty {
-            LoopingAvatarView(videoData: loopVideo)
-                .frame(width: 56, height: 56)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(BrandPalette.neonBlue.opacity(0.7), lineWidth: 2))
-        } else if let gifData = appState.profileGIFData, let image = UIImage(data: gifData) {
+        if let gifData = appState.profileGIFData, let image = safeUIImage(from: gifData) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
                 .frame(width: 56, height: 56)
                 .clipShape(Circle())
                 .overlay(Circle().stroke(BrandPalette.neonBlue.opacity(0.7), lineWidth: 2))
-        } else if let data = appState.profilePhotoData, let image = UIImage(data: data) {
+        } else if let data = appState.profilePhotoData, let image = safeUIImage(from: data) {
             Image(uiImage: image)
                 .resizable()
                 .scaledToFill()
                 .frame(width: 56, height: 56)
                 .clipShape(Circle())
                 .overlay(Circle().stroke(BrandPalette.neonBlue.opacity(0.6), lineWidth: 2))
+        } else if let loopVideo = appState.profileLoopVideoData, !loopVideo.isEmpty {
+            ZStack {
+                Circle()
+                    .fill(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.9))
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(BrandPalette.neonBlue)
+            }
+            .frame(width: 56, height: 56)
+            .overlay(Circle().stroke(BrandPalette.neonBlue.opacity(0.7), lineWidth: 2))
+            .accessibilityLabel("Profile video — open story to play")
         } else {
             Image(systemName: "person.crop.circle.fill")
                 .font(.system(size: 56))
@@ -1074,14 +1162,15 @@ struct ProfileView: View {
 
     @ViewBuilder
     private func postsGrid(_ posts: [PostItem]) -> some View {
+        let capped = Array(posts.prefix(15))
         let columns = [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)]
         LazyVGrid(columns: columns, spacing: 2) {
-            ForEach(posts) { post in
+            ForEach(capped) { post in
                 Button {
                     selectedPost = post
                 } label: {
                     ZStack(alignment: .bottomLeading) {
-                        if let data = post.imageData, let image = UIImage(data: data) {
+                        if let data = post.imageData, let image = safeUIImage(from: data) {
                             Image(uiImage: image)
                                 .resizable()
                                 .scaledToFill()
@@ -1147,8 +1236,8 @@ private struct AvatarStoryView: View {
         ZStack {
             Color.black.ignoresSafeArea()
             VStack(spacing: 12) {
-                if let videoData = appState.profileStoryVideoData {
-                    LoopingAvatarView(videoData: videoData)
+                if let videoData = appState.profileStoryVideoData, !videoData.isEmpty {
+                    SafeLoopingVideoView(videoData: videoData)
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .frame(maxWidth: .infinity, maxHeight: 520)
                 } else if let gifData = appState.profileStoryGIFData, let image = UIImage(data: gifData) {
@@ -1186,48 +1275,140 @@ private struct AvatarStoryView: View {
     }
 }
 
-private struct LoopingAvatarView: View {
+private struct SafeLoopingVideoView: View {
     let videoData: Data
-    @State private var player: AVQueuePlayer?
-    @State private var looper: AVPlayerLooper?
+    @State private var isPlayable = false
+    @State private var loadFailed = false
 
     var body: some View {
         Group {
-            if let player {
-                VideoPlayer(player: player)
+            if isPlayable {
+                SafeLoopingVideoPlayerRepresentable(videoData: videoData)
+            } else if loadFailed {
+                VStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.orange)
+                    Text("Could not play this video.")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
             } else {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(BrandPalette.neonBlue)
+                ProgressView()
+                    .tint(.white)
             }
         }
-        .frame(width: 56, height: 56)
-        .onAppear {
-            configurePlayerIfNeeded()
-        }
-        .onDisappear {
-            player?.pause()
-            player = nil
-            looper = nil
+        .task(id: videoData.count) {
+            await validateVideo()
         }
     }
 
-    private func configurePlayerIfNeeded() {
-        guard player == nil else { return }
+    private func validateVideo() async {
+        loadFailed = false
+        isPlayable = false
+        guard !videoData.isEmpty else {
+            loadFailed = true
+            return
+        }
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent(UUID().uuidString)
-            .appendingPathExtension("mp4")
+            .appendingPathComponent("story-preview-\(UUID().uuidString).mp4")
         do {
             try videoData.write(to: url, options: [.atomic])
+            let asset = AVURLAsset(url: url)
+            let tracks = try await asset.load(.tracks)
+            let hasVideo = tracks.contains { $0.mediaType == .video }
+            await MainActor.run {
+                isPlayable = hasVideo
+                loadFailed = !hasVideo
+            }
+        } catch {
+            await MainActor.run {
+                loadFailed = true
+            }
+        }
+    }
+}
+
+private struct SafeLoopingVideoPlayerRepresentable: UIViewRepresentable {
+    let videoData: Data
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> SafeLoopingPlayerUIView {
+        let view = SafeLoopingPlayerUIView()
+        context.coordinator.attach(to: view, videoData: videoData)
+        return view
+    }
+
+    func updateUIView(_ uiView: SafeLoopingPlayerUIView, context: Context) {}
+
+    static func dismantleUIView(_ uiView: SafeLoopingPlayerUIView, coordinator: Coordinator) {
+        coordinator.teardown()
+    }
+
+    final class Coordinator {
+        private weak var host: SafeLoopingPlayerUIView?
+
+        func attach(to view: SafeLoopingPlayerUIView, videoData: Data) {
+            host = view
+            view.configure(with: videoData)
+        }
+
+        func teardown() {
+            host?.teardown()
+            host = nil
+        }
+    }
+}
+
+private final class SafeLoopingPlayerUIView: UIView {
+    private var player: AVQueuePlayer?
+    private var looper: AVPlayerLooper?
+    private var tempFileURL: URL?
+
+    override static var layerClass: AnyClass { AVPlayerLayer.self }
+
+    private var playerLayer: AVPlayerLayer? {
+        layer as? AVPlayerLayer
+    }
+
+    func configure(with data: Data) {
+        guard player == nil, !data.isEmpty else { return }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("story-loop-\(UUID().uuidString).mp4")
+        do {
+            try data.write(to: url, options: [.atomic])
+            tempFileURL = url
             let item = AVPlayerItem(url: url)
             let queue = AVQueuePlayer()
             queue.isMuted = true
+            queue.automaticallyWaitsToMinimizeStalling = true
             looper = AVPlayerLooper(player: queue, templateItem: item)
             player = queue
+            playerLayer?.player = queue
+            playerLayer?.videoGravity = .resizeAspectFill
             queue.play()
         } catch {
-            player = nil
-            looper = nil
+            teardown()
+        }
+    }
+
+    func teardown() {
+        player?.pause()
+        playerLayer?.player = nil
+        player = nil
+        looper = nil
+        if let tempFileURL {
+            try? FileManager.default.removeItem(at: tempFileURL)
+        }
+        tempFileURL = nil
+    }
+
+    deinit {
+        if Thread.isMainThread {
+            teardown()
         }
     }
 }

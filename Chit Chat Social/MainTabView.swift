@@ -435,15 +435,15 @@ struct MainTabView: View {
         } else {
             switch index {
             case 0:
-                HomeView().tag(0)
+                HomeView().environmentObject(appState).tag(0)
             case 1:
                 SearchView().environmentObject(appState).tag(1)
             case 2:
-                PostView().tag(2)
+                PostView().environmentObject(appState).tag(2)
             case 3:
                 ReelsView().environmentObject(appState).tag(3)
             default:
-                ProfileView().tag(4)
+                ProfileView().environmentObject(appState).tag(4)
             }
         }
     }

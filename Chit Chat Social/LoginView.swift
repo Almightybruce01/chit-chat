@@ -33,6 +33,8 @@ struct LoginView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingProviderAlert = false
+    /// Shared by sign-in errors and stub provider taps.
+    @State private var authAlertTitle = "Notice"
     @State private var providerMessage = ""
     @State private var username = ""
     @State private var password = ""
@@ -70,7 +72,7 @@ struct LoginView: View {
         ZStack {
             EliteBackground()
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: LayoutTokens.sectionGap) {
                     AppLogoView(size: 150, cornerRadius: 20)
                         .padding(.top, 30)
 
@@ -105,7 +107,7 @@ struct LoginView: View {
 
                             Group {
                                 if authMode == .logIn {
-                                    Text("Email (password sign-in)")
+                                    Text("Email")
                                         .font(.subheadline.bold())
                                         .foregroundStyle(primaryText)
                                     TextField("you@email.com", text: $loginEmail)
@@ -116,24 +118,35 @@ struct LoginView: View {
                                         .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
                                         .clipShape(RoundedRectangle(cornerRadius: 10))
                                         .foregroundStyle(primaryText)
+                                    Text("Password — at least 8 characters, then tap Log in.")
+                                        .font(.caption.bold())
+                                        .foregroundStyle(secondaryText)
+                                    SecureField("Password", text: $password)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .padding(10)
+                                        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .foregroundStyle(primaryText)
+                                } else {
+                                    Text("Username — your @handle on the social side")
+                                        .font(.subheadline.bold())
+                                        .foregroundStyle(primaryText)
+                                    TextField("Unique username (required for email sign-up)", text: $username)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .padding(10)
+                                        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .foregroundStyle(primaryText)
+                                    SecureField("Password (8+ characters)", text: $password)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                        .padding(10)
+                                        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .foregroundStyle(primaryText)
                                 }
-                                Text(authMode == .logIn ? "Username — required for Google / Apple" : "Username — your @handle on the social side")
-                                    .font(.subheadline.bold())
-                                    .foregroundStyle(primaryText)
-                                TextField(authMode == .logIn ? "Your @handle" : "Unique username (required)", text: $username)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .padding(10)
-                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .foregroundStyle(primaryText)
-                                SecureField("Password (8+ characters)", text: $password)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .padding(10)
-                                    .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.8))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .foregroundStyle(primaryText)
                             }
 
                             if authMode == .signUp {
@@ -280,9 +293,14 @@ struct LoginView: View {
                         }
                     }
 
+                    if authMode == .logIn || (authMode == .signUp && accountPortal == .social) {
+                        oauthBridgeCard
+                    }
+
                     Button(action: googleLogin) {
                         authButtonLabel(title: "Continue with Google", icon: "globe")
                     }
+                    .buttonStyle(SnappyScaleButtonStyle())
                     if !thirdPartyAuthDisabled {
                         Text("Google may share your email with Firebase. Phone stays a placeholder until you add it in Profile.")
                             .font(.caption2)
@@ -308,18 +326,22 @@ struct LoginView: View {
                                 }
                             }
                         )
-                        .signInWithAppleButtonStyle(.black)
-                        .frame(height: 50)
-                        .cornerRadius(10)
+                        .signInWithAppleButtonStyle(colorScheme == .light ? .black : .white)
+                        .frame(height: LayoutTokens.minTouchTarget)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .allowsHitTesting(!thirdPartyAuthDisabled)
                         if thirdPartyAuthDisabled {
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
                                 .fill(Color.black.opacity(0.001))
-                                .frame(height: 50)
+                                .frame(height: LayoutTokens.minTouchTarget)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     if usernameForOAuthUnset {
-                                        presentAuthError("Enter a unique @handle above, then sign in with Apple.")
+                                        if authMode == .logIn {
+                                            presentAppleGoogleHandleReminder()
+                                        } else {
+                                            presentAuthError("Choose a unique @handle above, then sign in with Apple.")
+                                        }
                                     } else if authMode == .signUp && accountPortal == .business {
                                         presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
                                     }
@@ -345,7 +367,9 @@ struct LoginView: View {
                     Button(action: emailLogin) {
                         authButtonLabel(title: "Continue with Email", icon: "envelope.fill")
                     }
+                    .buttonStyle(SnappyScaleButtonStyle())
                     .disabled(emailPasswordShortcutDisabled)
+                    .opacity(emailPasswordShortcutDisabled ? 0.45 : 1)
 
                     DisclosureGroup(isExpanded: $showMoreOptions) {
                         VStack(spacing: 10) {
@@ -377,29 +401,40 @@ struct LoginView: View {
                             .font(.headline)
                             .foregroundStyle(primaryText)
                     }
-                    .padding()
+                    .padding(14)
                     .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.82))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: LayoutTokens.cardRadius, style: .continuous)
+                            .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: LayoutTokens.cardRadius, style: .continuous))
+                    .shadow(color: .black.opacity(colorScheme == .light ? 0.06 : 0.22), radius: 10, y: 4)
 
                     Text("Connect Threads, X/Twitter, Snapchat, YouTube, and LinkedIn after login.")
                         .font(.footnote)
                         .foregroundStyle(secondaryText)
                         .padding(.top, 4)
                 }
-                .padding()
+                .padding(.horizontal, LayoutTokens.screenHorizontal)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+                .frame(maxWidth: LayoutTokens.readableMaxWidth)
+                .frame(maxWidth: .infinity)
             }
         }
-        .alert("Provider setup", isPresented: $showingProviderAlert) {
+        .alert(authAlertTitle, isPresented: $showingProviderAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(providerMessage)
         }
         .sheet(isPresented: $showForgotPassword) {
             NavigationStack {
-                Form {
-                    Section {
+                ZStack {
+                    EliteBackground()
+                    Form {
+                        Section {
                         Text(
-                            "We email a one-time code to the address saved on your profile. You’ll need that code and access to the inbox — passwords can’t be changed from email match alone."
+                            "Most accounts receive a reset link by email—open it on this device if possible. Local demo flows use a 6-digit code (username plus matching profile email)."
                         )
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -407,28 +442,31 @@ struct LoginView: View {
                     switch forgotPhase {
                     case .requestCode:
                         Section("Account") {
-                            TextField("Username", text: $forgotUsername)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                            TextField("Email on file", text: $forgotEmail)
+                            TextField("Email for your account", text: $forgotEmail)
                                 .textInputAutocapitalization(.never)
                                 .keyboardType(.emailAddress)
                                 .autocorrectionDisabled()
+                            TextField("Username (local accounts only)", text: $forgotUsername)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
                         }
                         Section {
-                            Button(forgotSendingCode ? "Sending…" : "Email me a reset code") {
+                            Button(forgotSendingCode ? "Sending…" : "Send reset email") {
                                 forgotStatus = ""
                                 forgotSendingCode = true
                                 Task {
-                                    let err = await appState.requestPasswordResetCode(
+                                    let result = await appState.requestPasswordResetCode(
                                         username: forgotUsername,
                                         email: forgotEmail
                                     )
                                     await MainActor.run {
                                         forgotSendingCode = false
-                                        if let err {
-                                            forgotStatus = err
-                                        } else {
+                                        switch result {
+                                        case .failure(let message):
+                                            forgotStatus = message
+                                        case .firebaseEmailLinkSent:
+                                            forgotStatus = "Open the reset link from your inbox (including spam/junk). Set a new password, then come back here and log in."
+                                        case .localSixDigitCodeSent:
                                             forgotPhase = .enterNewPassword
                                             forgotStatus = "If your details matched, we sent a 6-digit code. Check your inbox and spam (valid ~15 min)."
                                         }
@@ -472,22 +510,27 @@ struct LoginView: View {
                             }
                         }
                     }
-                    if !forgotStatus.isEmpty {
-                        Section {
-                            Text(forgotStatus)
-                                .font(.caption)
-                                .foregroundStyle(forgotStatus.hasPrefix("Updated") ? .green : .orange)
+                        if !forgotStatus.isEmpty {
+                            Section {
+                                Text(forgotStatus)
+                                    .font(.caption)
+                                    .foregroundStyle(forgotStatus.hasPrefix("Updated") ? .green : .orange)
+                            }
                         }
                     }
+                    .scrollContentBackground(.hidden)
                 }
                 .navigationTitle("Reset password")
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Close") { showForgotPassword = false }
                     }
                 }
             }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -499,14 +542,24 @@ struct LoginView: View {
                 .fontWeight(.semibold)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 50)
-        .background(BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.92))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: 1)
+        .frame(minHeight: LayoutTokens.minTouchTarget)
+        .background(
+            ZStack {
+                BrandPalette.adaptiveCardBg(for: colorScheme).opacity(0.94)
+                LinearGradient(
+                    colors: [.white.opacity(colorScheme == .light ? 0.35 : 0.08), .clear],
+                    startPoint: .top,
+                    endPoint: .center
+                )
+            }
         )
         .foregroundStyle(primaryText)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: LayoutTokens.tabBarRadius / 2, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: LayoutTokens.tabBarRadius / 2, style: .continuous)
+                .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme), lineWidth: LayoutTokens.accentStrokeWidth)
+        )
+        .shadow(color: .black.opacity(colorScheme == .light ? 0.07 : 0.2), radius: 12, y: 4)
     }
 
     @ViewBuilder
@@ -551,6 +604,34 @@ struct LoginView: View {
             : "Register your business with EIN + entity details. Your @username still powers the social side; legal name powers hiring."
     }
 
+    private var oauthBridgeCard: some View {
+        EliteSectionCard {
+            VStack(alignment: .leading, spacing: 12) {
+                FuturisticSectionHeader(
+                    title: "Apple or Google",
+                    subtitle: authMode == .signUp
+                        ? "Choose a unique @handle, or leave blank and Sign in with Apple will assign one for you."
+                        : "Enter your public @handle below, then use Google or Sign in with Apple.",
+                    showAccentBar: true
+                )
+                TextField(authMode == .signUp ? "@handle (optional for Apple)" : "Your @handle", text: $username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(10)
+                    .background(
+                        BrandPalette.adaptiveCardBg(for: colorScheme).opacity(colorScheme == .light ? 0.65 : 0.55)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .foregroundStyle(primaryText)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme).opacity(0.9), lineWidth: 1)
+                    )
+            }
+            .padding(.vertical, -2)
+        }
+    }
+
     private var portalSignUpTitle: String {
         accountPortal == .social ? "Create your creator account" : "Register your business"
     }
@@ -565,12 +646,15 @@ struct LoginView: View {
                 ? "Email is required. Phone is optional. Username shows on the social app; you still get Corporate."
                 : "Email plus full business registration (including phone) is required.")
             : (accountPortal == .social
-                ? "Same password for both modes."
-                : "Use the username and password you set at registration.")
+                ? "Email and password only — no @handle needed on this card. Use “Apple or Google” below for social sign-in."
+                : "Use the email and password from your business registration.")
     }
 
     private var thirdPartyAuthDisabled: Bool {
-        usernameForOAuthUnset || (authMode == .signUp && accountPortal == .business)
+        if authMode == .signUp && accountPortal == .business { return true }
+        if authMode == .logIn { return usernameForOAuthUnset }
+        // Sign-up + creator: Apple may auto-assign @handle when blank.
+        return false
     }
 
     private var usernameForOAuthUnset: Bool {
@@ -656,7 +740,11 @@ struct LoginView: View {
             presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
             return
         }
-        guard applyUsernameFromInput() else { return }
+        if authMode == .logIn {
+            guard applyUsernameFromInput(isSignUp: false) else { return }
+        } else if !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            guard applyUsernameFromInput(isSignUp: true) else { return }
+        }
         appState.wantsProductUpdateEmails = wantsUpdateEmails
         guard let clientID = FirebaseApp.app()?.options.clientID else {
             presentAuthError("Missing Firebase client ID.")
@@ -687,21 +775,39 @@ struct LoginView: View {
             let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
 
             Auth.auth().signIn(with: credential) { result, error in
-                if let error = error {
-                    presentAuthError("Firebase Google sign-in error: \(error.localizedDescription)")
-                } else if let user = result?.user {
+                Task { @MainActor in
+                    if let error = error {
+                        presentAuthError("Firebase Google sign-in error: \(error.localizedDescription)")
+                        return
+                    }
+                    guard let user = result?.user else {
+                        presentAuthError("Google sign-in did not return a user profile.")
+                        return
+                    }
+                    let isNewFirebaseUser = result?.additionalUserInfo?.isNewUser ?? false
                     saveUserToFirestore(user: user, provider: "google.com")
-                    Task { @MainActor in
-                        appState.markVerificationEmailSent()
-                        if let error = appState.completeProviderLogin(
-                            username: username,
-                            provider: "google.com",
-                            accountEmailFromProvider: user.email
-                        ) {
-                            presentAuthError(error)
-                        } else {
-                            applyPortalProfileDefaults()
-                        }
+                    var resolved = username.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if authMode == .signUp, resolved.isEmpty {
+                        let emailLocal = user.email?.split(separator: "@").first.map(String.init) ?? "google"
+                        resolved = appState.suggestUniqueUsername(base: emailLocal)
+                        username = resolved
+                    } else if let cleaned = appState.cleanedUsername(from: resolved) {
+                        resolved = cleaned
+                    } else {
+                        presentAuthError("Enter a valid @handle before continuing with Google.")
+                        return
+                    }
+                    appState.markVerificationEmailSent()
+                    if let error = appState.completeProviderLogin(
+                        username: resolved,
+                        provider: "google.com",
+                        accountEmailFromProvider: user.email,
+                        isNewSignUp: authMode == .signUp,
+                        isNewFirebaseUser: isNewFirebaseUser
+                    ) {
+                        presentAuthError(error)
+                    } else {
+                        applyPortalProfileDefaults()
                     }
                 }
             }
@@ -713,20 +819,23 @@ struct LoginView: View {
             presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
             return
         }
-        guard applyUsernameFromInput() else { return }
-        appState.wantsProductUpdateEmails = wantsUpdateEmails
         guard let appleIDCredential = auth.credential as? ASAuthorizationAppleIDCredential else {
             presentAuthError("Invalid Apple credentials.")
             return
         }
+        guard let resolvedUsername = resolveOAuthUsername(
+            appleCredential: appleIDCredential,
+            isSignUp: authMode == .signUp
+        ) else { return }
 
+        appState.wantsProductUpdateEmails = wantsUpdateEmails
         guard let tokenData = appleIDCredential.identityToken,
               let idTokenString = String(data: tokenData, encoding: .utf8) else {
             presentAuthError("Failed to get Apple ID token.")
             return
         }
         guard let nonce = currentNonce else {
-            presentAuthError("Missing Apple sign-in nonce. Try again.")
+            presentAuthError("Missing Apple sign-in nonce. Tap Sign in with Apple again.")
             return
         }
 
@@ -737,21 +846,29 @@ struct LoginView: View {
         )
 
         Auth.auth().signIn(with: credential) { result, error in
-            if let error = error {
-                presentAuthError("Apple Firebase sign-in error: \(error.localizedDescription)")
-            } else if let user = result?.user {
+            Task { @MainActor in
+                defer { currentNonce = nil }
+                if let error = error {
+                    presentAuthError(friendlyAppleFirebaseError(error))
+                    return
+                }
+                guard let user = result?.user else {
+                    presentAuthError("Apple sign-in did not return a user profile.")
+                    return
+                }
+                let isNewFirebaseUser = result?.additionalUserInfo?.isNewUser ?? false
                 saveUserToFirestore(user: user, provider: "apple.com")
-                Task { @MainActor in
-                    appState.markVerificationEmailSent()
-                    if let error = appState.completeProviderLogin(
-                        username: username,
-                        provider: "apple.com",
-                        accountEmailFromProvider: user.email
-                    ) {
-                        presentAuthError(error)
-                    } else {
-                        applyPortalProfileDefaults()
-                    }
+                appState.markVerificationEmailSent()
+                if let error = appState.completeProviderLogin(
+                    username: resolvedUsername,
+                    provider: "apple.com",
+                    accountEmailFromProvider: user.email ?? appleIDCredential.email,
+                    isNewSignUp: authMode == .signUp,
+                    isNewFirebaseUser: isNewFirebaseUser
+                ) {
+                    presentAuthError(error)
+                } else {
+                    applyPortalProfileDefaults()
                 }
             }
         }
@@ -767,22 +884,79 @@ struct LoginView: View {
     }
 
     private func providerTapped(_ provider: String) {
+        authAlertTitle = "On the roadmap"
         providerMessage = "\(provider) auth can be added by enabling this provider in Firebase Auth and wiring the SDK callback."
         showingProviderAlert = true
     }
 
-    private func applyUsernameFromInput() -> Bool {
-        if let err = appState.usernameValidationError(username) {
-            providerMessage = err
-            showingProviderAlert = true
-            return false
-        }
-        let success = appState.setUsername(username)
+    private func applyUsernameFromInput(isSignUp: Bool = false) -> Bool {
+        guard let resolved = resolveOAuthUsername(appleCredential: nil, isSignUp: isSignUp) else { return false }
+        username = resolved
+        if isSignUp { return true }
+        let success = appState.setUsername(resolved)
         if !success {
-            providerMessage = "Username already taken."
+            authAlertTitle = "@handle unavailable"
+            providerMessage = "That @handle is already taken. Try another."
             showingProviderAlert = true
         }
         return success
+    }
+
+    private func resolveOAuthUsername(
+        appleCredential: ASAuthorizationAppleIDCredential?,
+        isSignUp: Bool
+    ) -> String? {
+        var raw = username.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if raw.isEmpty, isSignUp, let apple = appleCredential {
+            let emailLocal = apple.email?.split(separator: "@").first.map(String.init)
+            let appleBase = emailLocal ?? "apple\(apple.user.suffix(6))"
+            raw = appState.suggestUniqueUsername(base: appleBase)
+            username = raw
+        }
+
+        if raw.isEmpty {
+            if isSignUp {
+                presentAuthError("Enter a unique @handle above, or leave it blank and Sign in with Apple will assign one.")
+            } else {
+                presentAppleGoogleHandleReminder()
+            }
+            return nil
+        }
+
+        if let err = appState.usernameValidationError(raw) {
+            authAlertTitle = "@handle isn’t ready yet"
+            providerMessage = err
+            showingProviderAlert = true
+            return nil
+        }
+
+        guard let cleaned = appState.cleanedUsername(from: raw) else {
+            presentAuthError("Enter a valid @handle (3+ characters, letters/numbers/._).")
+            return nil
+        }
+
+        if isSignUp {
+            return cleaned
+        }
+        return cleaned
+    }
+
+    private func friendlyAppleFirebaseError(_ error: Error) -> String {
+        let ns = error as NSError
+        if ns.domain == AuthErrorDomain {
+            switch AuthErrorCode(rawValue: ns.code) {
+            case .invalidCredential:
+                return "Apple sign-in could not be verified. Close the app, try again, or use email sign-up."
+            case .emailAlreadyInUse, .accountExistsWithDifferentCredential:
+                return "This Apple ID is already linked. Switch to Log in, or use email sign-up with a new account."
+            case .networkError:
+                return "Network error during Apple sign-in. Check your connection and try again."
+            default:
+                break
+            }
+        }
+        return "Apple sign-in failed: \(error.localizedDescription)"
     }
 
     private var emailPasswordShortcutDisabled: Bool {
@@ -795,6 +969,17 @@ struct LoginView: View {
 
     private func primaryAuthAction() {
         appState.wantsProductUpdateEmails = wantsUpdateEmails
+        if authMode == .logIn {
+            let trimmedEmail = loginEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedEmail.isEmpty {
+                presentAuthError("Enter the email address for your account, then tap Log in.")
+                return
+            }
+            if password.count < 8 {
+                presentAuthError("Enter your password (at least 8 characters), then tap Log in.")
+                return
+            }
+        }
         Task {
             let error: String?
             switch authMode {
@@ -837,6 +1022,9 @@ struct LoginView: View {
                 presentAuthError(error)
                 return
             }
+            await MainActor.run {
+                HapticTokens.success()
+            }
             appState.markVerificationEmailSent()
             if authMode == .signUp {
                 signUpEmail = ""
@@ -846,8 +1034,17 @@ struct LoginView: View {
         }
     }
 
+    private func presentAppleGoogleHandleReminder() {
+        Task { @MainActor in
+            authAlertTitle = "Add your public @handle"
+            providerMessage = "Enter your unique @handle in the Apple or Google card above, then tap Sign in with Apple again."
+            showingProviderAlert = true
+        }
+    }
+
     private func presentAuthError(_ message: String) {
         Task { @MainActor in
+            authAlertTitle = "Couldn't sign you in"
             providerMessage = message
             showingProviderAlert = true
         }

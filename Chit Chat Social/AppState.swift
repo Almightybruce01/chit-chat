@@ -7,6 +7,14 @@ import CryptoKit
 import FirebaseAuth
 #endif
 
+enum PasswordResetRequestResponse: Sendable {
+    /// `Auth.sendPasswordReset` — user completes reset via the emailed link (no code entry in-app).
+    case firebaseEmailLinkSent
+    /// On-device credential flow plus backend email containing a six-digit code.
+    case localSixDigitCodeSent
+    case failure(String)
+}
+
 @MainActor
 final class AppState: ObservableObject {
     private let backend: BackendServicing
@@ -460,54 +468,54 @@ final class AppState: ObservableObject {
         UserDefaults.standard.removeObject(forKey: pendingPasswordResetStorageKey(usernameKey: usernameKey))
     }
 
-    /// Step 1: validates account, rate limits, emails a 6-digit code via `BackendServicing.sendPasswordResetCode` (production should use real SMTP).
-    func requestPasswordResetCode(username: String, email: String) async -> String? {
+    /// Step 1: Firebase users get a reset link; otherwise validates account, rate limits, and emails a 6-digit code via `BackendServicing.sendPasswordResetCode`.
+    func requestPasswordResetCode(username: String, email: String) async -> PasswordResetRequestResponse {
         if let err = consumeRateWindow(
             storageKey: passwordResetGlobalRateKey,
             limit: 20,
             windowSeconds: 3600
-        ) { return err }
+        ) { return .failure(err) }
 
 #if canImport(FirebaseAuth)
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmedEmail.isEmpty, validateAccountEmail(trimmedEmail) == nil {
             do {
                 try await Auth.auth().sendPasswordReset(withEmail: trimmedEmail)
-                return nil
+                return .firebaseEmailLinkSent
             } catch {
-                return nil
+                return .failure(error.localizedDescription)
             }
         }
 #endif
 
-        guard let cleaned = normalizedUsername(from: username) else { return "Invalid username." }
+        guard let cleaned = normalizedUsername(from: username) else { return .failure("Invalid username.") }
         let key = cleaned.lowercased()
 
         if let lock = passwordResetLockUntil(usernameKey: key) {
             let f = RelativeDateTimeFormatter()
             f.unitsStyle = .short
-            return "Too many failed codes. Try again \(f.localizedString(for: lock, relativeTo: Date()))."
+            return .failure("Too many failed codes. Try again \(f.localizedString(for: lock, relativeTo: Date())).")
         }
 
-        guard localCredentials[key] != nil else { return "No password saved for that username on this device." }
-        guard let profile = internalUsers.first(where: { $0.username.lowercased() == key }) else { return "Account not found on this device." }
+        guard localCredentials[key] != nil else { return .failure("No password saved for that username on this device.") }
+        guard let profile = internalUsers.first(where: { $0.username.lowercased() == key }) else { return .failure("Account not found on this device.") }
         let typed = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let saved = profile.accountEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !saved.isEmpty else {
-            return "No email on file. Sign in and add your email under Profile, or create a new account."
+            return .failure("No email on file. Sign in and add your email under Profile, or create a new account.")
         }
         guard !Self.isPlaceholderAccountEmail(saved) else {
-            return "Add a real email under Profile before using password reset."
+            return .failure("Add a real email under Profile before using password reset.")
         }
         guard typed == saved else {
-            return "That email doesn’t match the address on file for this username."
+            return .failure("That email doesn’t match the address on file for this username.")
         }
 
         if let err = consumeRateWindow(
             storageKey: passwordResetUserRatePrefix + key,
             limit: 5,
             windowSeconds: 3600
-        ) { return err }
+        ) { return .failure(err) }
 
         let code = String(format: "%06d", Int.random(in: 0...999_999))
         let salt = UUID().uuidString
@@ -533,9 +541,9 @@ final class AppState: ObservableObject {
             )
         } catch {
             clearPendingPasswordReset(usernameKey: key)
-            return "Could not send reset email. Try again later."
+            return .failure("Could not send reset email. Try again later.")
         }
-        return nil
+        return .localSixDigitCodeSent
     }
 
     /// Step 2: verify emailed code, then set a new password.
@@ -2023,11 +2031,25 @@ final class AppState: ObservableObject {
         }
     }
 
-    func requestPaidVerification() {
+    /// Grants paid verification after a verified StoreKit non-consumable purchase.
+    func grantPaidVerificationFromPurchase() {
         guard currentUser.verificationStatus != .verifiedInternal else { return }
         currentUser.verificationStatus = .paid
         syncCurrentUserInDirectory()
     }
+
+    /// Keeps profile badge in sync with App Store entitlements (purchase, restore, refund).
+    func syncPaidVerificationEntitlement(active: Bool) {
+        if active {
+            grantPaidVerificationFromPurchase()
+        } else if currentUser.verificationStatus == .paid {
+            currentUser.verificationStatus = .unverified
+            syncCurrentUserInDirectory()
+        }
+    }
+
+    /// Reserved — use StoreKit via `StoreKitManager.purchasePaidVerification()`.
+    func requestPaidVerification() {}
 
     func grantInternalVerification(userID: UUID) {
         guard let index = internalUsers.firstIndex(where: { $0.id == userID }) else { return }
@@ -2522,6 +2544,30 @@ final class AppState: ObservableObject {
             return "This username is reserved."
         }
         return nil
+    }
+
+    /// Normalizes a raw @handle for OAuth / sign-up flows.
+    func cleanedUsername(from rawValue: String) -> String? {
+        normalizedUsername(from: rawValue)
+    }
+
+    /// Picks a unique, non-reserved username from a base string (e.g. Apple email local-part).
+    func suggestUniqueUsername(base: String) -> String {
+        var sanitized = base
+            .lowercased()
+            .filter { $0.isLetter || $0.isNumber || $0 == "." || $0 == "_" }
+        if sanitized.count < 3 {
+            sanitized = "creator\(UUID().uuidString.prefix(6).lowercased())"
+        }
+        sanitized = String(sanitized.prefix(20))
+        var candidate = sanitized
+        var suffix = 0
+        while ReservedHandles.isReserved(candidate)
+            || internalUsers.contains(where: { $0.username.caseInsensitiveCompare(candidate) == .orderedSame }) {
+            suffix += 1
+            candidate = "\(sanitized)\(suffix)"
+        }
+        return candidate
     }
 
     @discardableResult
@@ -4325,57 +4371,98 @@ final class AppState: ObservableObject {
         emailVerificationSent = true
     }
 
-    func completeProviderLogin(username: String, provider: String, accountEmailFromProvider: String? = nil) -> String? {
-        guard let cleaned = normalizedUsername(from: username) else {
+    func completeProviderLogin(
+        username: String,
+        provider: String,
+        accountEmailFromProvider: String? = nil,
+        isNewSignUp: Bool = false,
+        isNewFirebaseUser: Bool = false
+    ) -> String? {
+        guard var cleaned = normalizedUsername(from: username) else {
             return "Enter a valid unique username (3+ chars, letters/numbers/._)."
-        }
-        guard !ReservedHandles.isReserved(cleaned) else {
-            return "This username is reserved."
         }
         let providerEmail = (accountEmailFromProvider ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
 #if canImport(FirebaseAuth)
         let firebaseUid = Auth.auth().currentUser?.uid
 #endif
 
-        if let idx = internalUsers.firstIndex(where: { $0.username.caseInsensitiveCompare(cleaned) == .orderedSame }) {
+#if canImport(FirebaseAuth)
+        if let firebaseUid,
+           let idx = internalUsers.firstIndex(where: { $0.firebaseUserId == firebaseUid }) {
             currentUser = internalUsers[idx]
-            if !providerEmail.isEmpty {
-                if currentUser.accountEmail.isEmpty || Self.isPlaceholderAccountEmail(currentUser.accountEmail) {
-                    currentUser.accountEmail = providerEmail
-                }
-            } else if Self.isOAuthProvider(provider), currentUser.accountEmail.isEmpty {
-                currentUser.accountEmail = Self.placeholderAccountEmail(forUsername: cleaned)
-            }
-            if Self.isOAuthProvider(provider) {
-                let digits = currentUser.accountPhone.filter(\.isNumber)
-                if digits.count < 10 {
-                    currentUser.accountPhone = Self.placeholderAccountPhoneDigits
-                }
-            }
+            applyProviderContactFields(provider: provider, providerEmail: providerEmail, firebaseUid: firebaseUid)
             syncCurrentUserInDirectory()
-        } else {
-            currentUser.username = cleaned
-            currentUser.handle = "@\(cleaned)"
-            if currentUser.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                currentUser.displayName = cleaned
+            finalizeProviderLogin(provider: provider, username: currentUser.username, firebaseUid: firebaseUid)
+            return nil
+        }
+#endif
+
+        if let idx = internalUsers.firstIndex(where: { $0.username.caseInsensitiveCompare(cleaned) == .orderedSame }) {
+            let existing = internalUsers[idx]
+#if canImport(FirebaseAuth)
+            let sameFirebaseAccount = firebaseUid != nil && existing.firebaseUserId == firebaseUid
+#else
+            let sameFirebaseAccount = false
+#endif
+            let explicitLogin = !isNewSignUp || !isNewFirebaseUser
+
+            if sameFirebaseAccount || explicitLogin {
+                currentUser = existing
+                applyProviderContactFields(provider: provider, providerEmail: providerEmail, firebaseUid: firebaseUid)
+                syncCurrentUserInDirectory()
+                finalizeProviderLogin(provider: provider, username: currentUser.username, firebaseUid: firebaseUid)
+                return nil
             }
-            if !providerEmail.isEmpty {
+
+            cleaned = suggestUniqueUsername(base: cleaned)
+        }
+
+        if ReservedHandles.isReserved(cleaned) {
+            cleaned = suggestUniqueUsername(base: cleaned)
+        }
+        while internalUsers.contains(where: { $0.username.caseInsensitiveCompare(cleaned) == .orderedSame }) {
+            cleaned = suggestUniqueUsername(base: "\(cleaned)1")
+        }
+
+        currentUser.username = cleaned
+        currentUser.handle = "@\(cleaned)"
+        if currentUser.displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            currentUser.displayName = cleaned
+        }
+        applyProviderContactFields(provider: provider, providerEmail: providerEmail, firebaseUid: firebaseUid)
+        syncCurrentUserInDirectory()
+        finalizeProviderLogin(provider: provider, username: cleaned, firebaseUid: firebaseUid)
+        return nil
+    }
+
+    private func applyProviderContactFields(provider: String, providerEmail: String, firebaseUid: String?) {
+        if !providerEmail.isEmpty {
+            if currentUser.accountEmail.isEmpty || Self.isPlaceholderAccountEmail(currentUser.accountEmail) {
                 currentUser.accountEmail = providerEmail
-            } else if Self.isOAuthProvider(provider) {
-                currentUser.accountEmail = Self.placeholderAccountEmail(forUsername: cleaned)
             }
-            if Self.isOAuthProvider(provider) {
+        } else if Self.isOAuthProvider(provider), currentUser.accountEmail.isEmpty {
+            currentUser.accountEmail = Self.placeholderAccountEmail(forUsername: currentUser.username)
+        }
+        if Self.isOAuthProvider(provider) {
+            let digits = currentUser.accountPhone.filter(\.isNumber)
+            if digits.count < 10 {
                 currentUser.accountPhone = Self.placeholderAccountPhoneDigits
             }
-            syncCurrentUserInDirectory()
         }
 #if canImport(FirebaseAuth)
         if let firebaseUid {
             currentUser.firebaseUserId = firebaseUid
+        }
+#endif
+    }
+
+    private func finalizeProviderLogin(provider: String, username: String, firebaseUid: String?) {
+#if canImport(FirebaseAuth)
+        if let firebaseUid {
             firebaseSignedInUID = firebaseUid
         }
 #endif
-        registerLoggedInAccount(cleaned)
+        registerLoggedInAccount(username)
         refreshCurrentProfileMedia()
         loadSavedPosts()
         loadProfileQuoteState()
@@ -4401,7 +4488,6 @@ final class AppState: ObservableObject {
             }
         }
 #endif
-        return nil
     }
 
     func endSession() {

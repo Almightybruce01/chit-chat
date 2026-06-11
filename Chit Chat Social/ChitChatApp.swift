@@ -14,12 +14,14 @@ struct ChitChatApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var appState = AppState()
+    private let storeKit = StoreKitManager.shared
     @AppStorage("chitchat.appearance") private var appearanceRaw = AppAppearance.auto.rawValue
 
     var body: some Scene {
         WindowGroup {
             SplashView()
                 .environmentObject(appState)
+                .environment(\.storeKit, storeKit)
                 .preferredColorScheme(preferredColorScheme)
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {

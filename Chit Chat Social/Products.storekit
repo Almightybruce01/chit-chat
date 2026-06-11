@@ -1,0 +1,37 @@
+{
+  "identifier" : "F4A2B8C1",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "PAID_VERIFY_001",
+      "localizations" : [
+        {
+          "description" : "Public paid verification badge on your Chit Chat Social profile. Official verification remains a separate, free internal review.",
+          "displayName" : "Paid Verification Badge",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.bruce.ChitChat.paidVerification",
+      "referenceName" : "Paid Verification Badge",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_storeKitErrors" : [
+
+    ],
+    "_timeRate" : 0
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

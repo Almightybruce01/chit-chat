@@ -2,6 +2,7 @@ import SwiftUI
 
 struct IconHubView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.storeKit) private var storeKit
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("chitchat.appearance") private var appearanceRaw = AppAppearance.auto.rawValue
     @State private var showMusic = false
@@ -58,7 +59,12 @@ struct IconHubView: View {
             .sheet(isPresented: $showGroups) { NavigationStack { CommunitiesHubView().environmentObject(appState) } }
             .sheet(isPresented: $showMarket) { NavigationStack { SearchView().environmentObject(appState) } }
             .sheet(isPresented: $showPulse) { NavigationStack { PulseBoardView().environmentObject(appState) } }
-            .sheet(isPresented: $showVerify) { NavigationStack { VerificationView().environmentObject(appState) } }
+            .sheet(isPresented: $showVerify) {
+                NavigationStack {
+                    VerificationView()
+                        .environmentObject(appState)
+                }
+            }
             .sheet(isPresented: $showSafety) { NavigationStack { SafetySettingsView().environmentObject(appState) } }
             .sheet(isPresented: $showExecutionQueue) { NavigationStack { ExecutionQueueView().environmentObject(appState) } }
             .sheet(isPresented: $showSuperEngine) { NavigationStack { SuperAppFeatureHubView().environmentObject(appState) } }

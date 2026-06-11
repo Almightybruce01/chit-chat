@@ -1,13 +1,15 @@
 import SwiftUI
+import StoreKit
 
 struct VerificationView: View {
     @EnvironmentObject private var appState: AppState
+    @Environment(\.storeKit) private var storeKit
     @Environment(\.colorScheme) private var colorScheme
     @State private var note = ""
     @State private var hasInstagramVerification = false
-    @State private var wantPaidBadge = false
     @State private var submitted = false
     @State private var selectedCategory: VerificationCategory
+    @State private var purchaseSucceeded = false
 
     init(initialCategory: VerificationCategory? = nil) {
         _selectedCategory = State(initialValue: initialCategory ?? .creator)
@@ -17,18 +19,26 @@ struct VerificationView: View {
         ZStack {
             EliteBackground()
             Form {
-                Section("Requirements") {
-                    Text("Official verification is internal-only and reviewed by your team.")
-                    Text("Paid verification is public and marked as paid when tapped.")
+                Section {
+                    Label("Two separate badges", systemImage: "info.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                    Text("Official verification (free) is reviewed by our team and shows a blue check. Paid verification badge (In-App Purchase) is optional, costs money once through Apple, and shows a separate gold paid badge. They are not the same.")
+                        .font(.caption)
                 }
-                .font(.footnote)
                 .foregroundStyle(secondaryText)
 
-                Section("Request") {
+                Section {
+                    Text("FREE — Team review")
+                        .font(.caption.bold())
+                        .foregroundStyle(BrandPalette.neonGreen)
+                } header: {
+                    Text("Official verification")
+                } footer: {
+                    Text("Submitting here does not charge you and does not unlock the paid badge.")
+                }
+
+                Section {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("What describes you?")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(primaryText)
                         Picker("Category", selection: $selectedCategory) {
                             ForEach(VerificationCategory.allCases) { cat in
                                 Text(cat.displayName).tag(cat)
@@ -42,14 +52,10 @@ struct VerificationView: View {
                         }
                     }
                     Toggle("Already verified on Instagram", isOn: $hasInstagramVerification)
-                    Toggle("Buy paid verification badge", isOn: $wantPaidBadge)
                     TextField("Add profile details", text: $note, axis: .vertical)
                         .lineLimit(3...5)
 
-                    Button("Submit verification request") {
-                        if wantPaidBadge {
-                            appState.requestPaidVerification()
-                        }
+                    Button("Submit free official verification request") {
                         appState.requestVerification(
                             note: note.isEmpty ? "No additional note" : note,
                             hasInstagramVerification: hasInstagramVerification,
@@ -62,17 +68,58 @@ struct VerificationView: View {
                     .tint(BrandPalette.neonGreen)
                 }
 
+                Section {
+                    Text("PAID — Apple In-App Purchase")
+                        .font(.caption.bold())
+                        .foregroundStyle(.yellow)
+                } header: {
+                    Text("Paid verification badge")
+                } footer: {
+                    Text("One-time non-consumable purchase through Apple. Separate from the free official request above.")
+                }
+
+                Section {
+                    paidBadgePurchaseContent
+
+                    Button("Restore Purchases") {
+                        Task {
+                            await storeKit.restorePurchases()
+                            appState.syncPaidVerificationEntitlement(active: storeKit.hasPaidVerification)
+                            if storeKit.hasPaidVerification {
+                                purchaseSucceeded = true
+                                HapticTokens.success()
+                            }
+                        }
+                    }
+                    .disabled(storeKit.isRestoring || storeKit.isPurchasing)
+
+                    if let err = storeKit.purchaseError, !err.isEmpty {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+
                 Section("Current Status") {
-                    Text(statusLine)
+                    Text(officialStatusLine)
                         .foregroundStyle(primaryText)
-                    Text("Request queue size: \(appState.verificationRequests.filter { $0.status == .pending }.count)")
+                    Text(paidStatusLine)
+                        .foregroundStyle(secondaryText)
+                        .font(.caption)
+                    Text("Free request queue: \(appState.verificationRequests.filter { $0.status == .pending }.count) pending")
                         .foregroundStyle(secondaryText)
                         .font(.caption)
                 }
 
                 if submitted {
                     Section {
-                        Text("Request submitted. Paid badge updates instantly, official badge requires internal approval.")
+                        Text("Free official verification request submitted. Our team will review it separately from any paid badge.")
+                            .foregroundStyle(colorScheme == .light ? .green.opacity(0.85) : .green)
+                    }
+                }
+                if purchaseSucceeded {
+                    Section {
+                        Text("Paid verification badge unlocked via In-App Purchase.")
                             .foregroundStyle(colorScheme == .light ? .green.opacity(0.85) : .green)
                     }
                 }
@@ -81,6 +128,86 @@ struct VerificationView: View {
             .background(Color.clear)
         }
         .navigationTitle("Verification")
+        .task {
+            await storeKit.loadProducts()
+            await storeKit.refreshPurchasedProducts()
+            appState.syncPaidVerificationEntitlement(active: storeKit.hasPaidVerification)
+        }
+        .onChange(of: storeKit.hasPaidVerification) { _, active in
+            appState.syncPaidVerificationEntitlement(active: active)
+        }
+    }
+
+    @ViewBuilder
+    private var paidBadgePurchaseContent: some View {
+        if appState.currentUser.verificationStatus == .verifiedInternal {
+            Text("You already have official verification. The optional paid badge is not required.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+        } else if storeKit.hasPaidVerification || appState.currentUser.verificationStatus == .paid {
+            Label("Paid verification badge active", systemImage: "dollarsign.seal.fill")
+                .foregroundStyle(.yellow)
+            Text("This gold paid badge is separate from free official verification.")
+                .font(.caption)
+                .foregroundStyle(secondaryText)
+        } else if let product = storeKit.paidVerificationProduct {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Paid Verification Badge")
+                    .font(.headline)
+                Text(product.description)
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+                Button {
+                    Task {
+                        purchaseSucceeded = false
+                        if await storeKit.purchasePaidVerification() {
+                            appState.grantPaidVerificationFromPurchase()
+                            purchaseSucceeded = true
+                            HapticTokens.success()
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Spacer()
+                        if storeKit.isPurchasing {
+                            ProgressView()
+                                .tint(.black)
+                            Text("Processing…")
+                                .fontWeight(.semibold)
+                        } else {
+                            Text("Buy Paid Verification Badge — \(product.displayPrice)")
+                                .fontWeight(.semibold)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.yellow)
+                .disabled(storeKit.isPurchasing)
+            }
+        } else if storeKit.productLoadState == .loading || storeKit.productLoadState == .idle {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Loading App Store product…")
+                    .font(.caption)
+                    .foregroundStyle(secondaryText)
+            }
+            Button("Retry") {
+                Task { await storeKit.loadProducts() }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(storeKit.productUnavailableMessage)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                Button("Retry loading product") {
+                    Task { await storeKit.loadProducts() }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(BrandPalette.neonBlue)
+            }
+        }
     }
 
     private var primaryText: Color {
@@ -91,16 +218,21 @@ struct VerificationView: View {
         colorScheme == .light ? .black.opacity(0.72) : .white.opacity(0.82)
     }
 
-    private var statusLine: String {
+    private var officialStatusLine: String {
         switch appState.currentUser.verificationStatus {
-        case .unverified:
-            return "Status: Unverified"
-        case .pending:
-            return "Status: Pending review"
-        case .paid:
-            return "Status: Paid verification"
         case .verifiedInternal:
-            return "Status: Officially verified"
+            return "Official: Verified (free, team-approved)"
+        case .pending:
+            return "Official: Pending team review"
+        case .unverified, .paid:
+            return "Official: Not verified"
         }
+    }
+
+    private var paidStatusLine: String {
+        if storeKit.hasPaidVerification || appState.currentUser.verificationStatus == .paid {
+            return "Paid badge: Active (In-App Purchase)"
+        }
+        return "Paid badge: Not purchased"
     }
 }

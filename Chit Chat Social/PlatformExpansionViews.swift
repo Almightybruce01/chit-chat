@@ -442,6 +442,12 @@ struct ShopHubView: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            Text("Catalog preview only — seller listings are not purchasable in-app. No payment is collected here.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
             Picker("Shop View", selection: $selectedView) {
                 Text("Live Swipe").tag(0)
                 Text("Products").tag(1)
