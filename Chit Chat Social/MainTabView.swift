@@ -20,16 +20,26 @@ struct MainTabView: View {
 
     var body: some View {
         ZStack {
-        TabView(selection: $selectedTab) {
-            tabContent(index: 0)
-            tabContent(index: 1)
-            tabContent(index: 2)
-            tabContent(index: 3)
-            tabContent(index: 4)
+        Group {
+            switch selectedTab {
+            case 0:
+                tabContent(index: 0)
+            case 1:
+                tabContent(index: 1)
+            case 2:
+                tabContent(index: 2)
+            case 3:
+                tabContent(index: 3)
+            default:
+                tabContent(index: 4)
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .id("\(appState.mode.rawValue)-tab-\(selectedTab)")
         .environmentObject(permissionManager)
         .id(appState.mode)
         .animation(MotionTokens.spring, value: appState.mode)
+        .animation(MotionTokens.spring, value: selectedTab)
         .toolbar(.hidden, for: .tabBar)
         .toolbarBackground(.hidden, for: .tabBar)
         .toolbar {
@@ -422,28 +432,28 @@ struct MainTabView: View {
         if appState.mode == .enterprise {
             switch index {
             case 0:
-                EnterpriseWorkspaceHomeView().environmentObject(appState).tag(0)
+                EnterpriseWorkspaceHomeView().environmentObject(appState)
             case 1:
-                EnterpriseTalentView().environmentObject(appState).tag(1)
+                EnterpriseTalentView().environmentObject(appState)
             case 2:
-                EnterpriseComposerView().environmentObject(appState).tag(2)
+                EnterpriseComposerView().environmentObject(appState)
             case 3:
-                EnterpriseInboxView().environmentObject(appState).tag(3)
+                EnterpriseInboxView().environmentObject(appState)
             default:
-                EnterpriseProfileView().environmentObject(appState).tag(4)
+                EnterpriseProfileView().environmentObject(appState)
             }
         } else {
             switch index {
             case 0:
-                HomeView().environmentObject(appState).tag(0)
+                HomeView().environmentObject(appState)
             case 1:
-                SearchView().environmentObject(appState).tag(1)
+                SearchView().environmentObject(appState)
             case 2:
-                PostView().environmentObject(appState).tag(2)
+                PostView().environmentObject(appState)
             case 3:
-                ReelsView().environmentObject(appState).tag(3)
+                ReelsView().environmentObject(appState)
             default:
-                ProfileView().environmentObject(appState).tag(4)
+                ProfileView().environmentObject(appState)
             }
         }
     }

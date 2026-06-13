@@ -18,7 +18,13 @@ struct ContentView: View {
             if !hasSeenOnboarding {
                 OnboardingView()
             } else if appState.firebaseSignedInUID != nil {
-                if communityTermsAccepted {
+                if !appState.isSessionBootstrapComplete {
+                    ZStack {
+                        EliteBackground()
+                        ProgressView("Loading your account…")
+                            .padding()
+                    }
+                } else if communityTermsAccepted {
                     MainTabView()
                 } else {
                     CommunityTermsGateView(didAccept: $communityTermsAccepted)

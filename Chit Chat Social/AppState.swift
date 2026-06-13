@@ -63,6 +63,8 @@ final class AppState: ObservableObject {
     @Published var session: AppSession?
     /// Set when Firebase Auth has a user; drives main UI gate with `ContentView`.
     @Published var firebaseSignedInUID: String?
+    /// False while Firebase profile hydration / post-login reload is in flight — keeps Profile from racing unstable state.
+    @Published private(set) var isSessionBootstrapComplete = true
     /// From Firestore `admin_users/{uid}` (self-read); set after sign-in.
     @Published var isInternalAdminCache = false
 
@@ -4462,6 +4464,7 @@ final class AppState: ObservableObject {
             firebaseSignedInUID = firebaseUid
         }
 #endif
+        isSessionBootstrapComplete = false
         registerLoggedInAccount(username)
         refreshCurrentProfileMedia()
         loadSavedPosts()
@@ -4482,11 +4485,16 @@ final class AppState: ObservableObject {
         beginSession(provider: provider)
 #if canImport(FirebaseAuth) && canImport(FirebaseFirestore)
         if Auth.auth().currentUser != nil {
-            Task {
+            Task { @MainActor in
                 await claimUsernameDocumentIfNeeded()
                 await hydrateProfileFromFirestoreForCurrentFirebaseUser()
+                isSessionBootstrapComplete = true
             }
+        } else {
+            isSessionBootstrapComplete = true
         }
+#else
+        isSessionBootstrapComplete = true
 #endif
     }
 
@@ -4494,6 +4502,7 @@ final class AppState: ObservableObject {
         session = nil
         UserDefaults.standard.removeObject(forKey: sessionStorageKey)
         firebaseSignedInUID = nil
+        isSessionBootstrapComplete = true
         isInternalAdminCache = false
 #if canImport(FirebaseAuth)
         try? Auth.auth().signOut()
@@ -5552,6 +5561,7 @@ extension AppState {
             Task { await refreshInternalAdminAccess() }
         } else {
             firebaseSignedInUID = nil
+            isSessionBootstrapComplete = true
             isInternalAdminCache = false
             session = nil
             UserDefaults.standard.removeObject(forKey: AppState.sessionUserDefaultsKey)
@@ -5562,18 +5572,22 @@ extension AppState {
     private func reconcileFirebaseOnColdLaunch() {
         guard Auth.auth().currentUser != nil else {
             firebaseSignedInUID = nil
+            isSessionBootstrapComplete = true
             return
         }
         firebaseSignedInUID = Auth.auth().currentUser?.uid
-        Task {
+        isSessionBootstrapComplete = false
+        Task { @MainActor in
             await hydrateProfileFromFirestoreForCurrentFirebaseUser()
             await refreshInternalAdminAccess()
+            isSessionBootstrapComplete = true
         }
     }
 
     func hydrateProfileFromFirestoreForCurrentFirebaseUser() async {
         guard let user = Auth.auth().currentUser else { return }
         let uid = user.uid
+        let preserved = currentUser
         let ref = Firestore.firestore().collection(ChitChatFirestoreSchema.Collection.users).document(uid)
         let snap: DocumentSnapshot?
         do {
@@ -5582,7 +5596,12 @@ extension AppState {
             snap = nil
         }
         if let snap, snap.exists, let data = snap.data() {
-            currentUser = userProfileFromChitChatFirestoreData(data, uid: uid)
+            var merged = userProfileFromChitChatFirestoreData(data, uid: uid, existing: preserved)
+            if preserved.username.lowercased() != "guest", merged.username.lowercased() == "user" {
+                merged.username = preserved.username
+                merged.handle = preserved.handle
+            }
+            currentUser = merged
             syncCurrentUserInDirectory()
             runPostLoginAccountDataReload()
             let provider = user.providerData.first?.providerID ?? "firebase"
@@ -5761,12 +5780,16 @@ extension AppState {
             registerLoggedInAccount(cleaned)
             syncCurrentUserInDirectory()
             pushChitChatUserDirectoryIfFirebaseSignedIn()
+            isSessionBootstrapComplete = false
             runPostLoginAccountDataReload()
             beginSession(provider: "password")
             firebaseSignedInUID = uid
+            await hydrateProfileFromFirestoreForCurrentFirebaseUser()
             await refreshInternalAdminAccess()
+            isSessionBootstrapComplete = true
             return nil
         } catch {
+            isSessionBootstrapComplete = true
             return error.localizedDescription
         }
     }
@@ -5774,14 +5797,17 @@ extension AppState {
     func logInWithFirebase(email: String, password: String) async -> String? {
         let em = email.trimmingCharacters(in: .whitespacesAndNewlines)
         if let err = validateAccountEmail(em) { return err }
+        isSessionBootstrapComplete = false
         do {
             let r = try await Auth.auth().signIn(withEmail: em, password: password)
             firebaseSignedInUID = r.user.uid
             await hydrateProfileFromFirestoreForCurrentFirebaseUser()
             await refreshInternalAdminAccess()
             registerLoggedInAccount(currentUser.username)
+            isSessionBootstrapComplete = true
             return nil
         } catch {
+            isSessionBootstrapComplete = true
             return error.localizedDescription
         }
     }

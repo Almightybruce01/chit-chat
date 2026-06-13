@@ -66,8 +66,10 @@ func pushCurrentChitChatProfileToFirestore(firebaseUser: User, profile: UserProf
 }
 
 /// Builds a `UserProfile` from merged `users/{uid}` fields (best-effort).
-func userProfileFromChitChatFirestoreData(_ data: [String: Any], uid: String) -> UserProfile {
-    let profileId = (data["profileId"] as? String).flatMap(UUID.init(uuidString:)) ?? UUID()
+func userProfileFromChitChatFirestoreData(_ data: [String: Any], uid: String, existing: UserProfile? = nil) -> UserProfile {
+    let profileId = (data["profileId"] as? String).flatMap(UUID.init(uuidString:))
+        ?? existing?.id
+        ?? UUID()
     let usernameTrimmed = (data["username"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     let username = usernameTrimmed.isEmpty ? "user" : usernameTrimmed
     let handleRaw = (data["handle"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "@\(username)"
@@ -84,8 +86,8 @@ func userProfileFromChitChatFirestoreData(_ data: [String: Any], uid: String) ->
         id: profileId,
         username: username,
         handle: handle,
-        accountEmail: (data["accountEmail"] as? String) ?? (data["email"] as? String) ?? "",
-        accountPhone: (data["accountPhone"] as? String) ?? "",
+        accountEmail: (data["accountEmail"] as? String) ?? (data["email"] as? String) ?? existing?.accountEmail ?? "",
+        accountPhone: (data["accountPhone"] as? String) ?? existing?.accountPhone ?? "",
         enterpriseAlias: enterpriseAlias,
         displayName: displayName,
         followers: followers,
