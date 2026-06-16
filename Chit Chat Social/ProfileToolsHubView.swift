@@ -10,6 +10,7 @@ struct ProfileToolsHubView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.storeKit) private var storeKit
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.openURL) private var openURL
 
     @State private var aliasDraft = ""
@@ -153,6 +154,18 @@ struct ProfileToolsHubView: View {
                     }
                 }
 
+                Section {
+                    NavigationLink {
+                        DeleteAccountView()
+                            .environmentObject(appState)
+                    } label: {
+                        Label("Delete account", systemImage: "person.crop.circle.badge.minus")
+                            .foregroundStyle(.red)
+                    }
+                } footer: {
+                    Text("Permanently deletes your account and data. This cannot be undone.")
+                }
+
                 Section("Creator & business") {
                     NavigationLink {
                         ResumeEnterpriseView()
@@ -195,6 +208,8 @@ struct ProfileToolsHubView: View {
                 }
             }
             .scrollContentBackground(.hidden)
+            .frame(maxWidth: horizontalSizeClass == .regular ? 640 : .infinity)
+            .frame(maxWidth: .infinity)
         }
         .navigationTitle("Settings & tools")
         .navigationBarTitleDisplayMode(.inline)

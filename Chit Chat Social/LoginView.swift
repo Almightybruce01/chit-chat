@@ -32,6 +32,7 @@ private enum ForgotPasswordPhase {
 struct LoginView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var showingProviderAlert = false
     /// Shared by sign-in errors and stub provider taps.
     @State private var authAlertTitle = "Notice"
@@ -415,10 +416,10 @@ struct LoginView: View {
                         .foregroundStyle(secondaryText)
                         .padding(.top, 4)
                 }
-                .padding(.horizontal, LayoutTokens.screenHorizontal)
-                .padding(.top, 8)
+                .padding(.horizontal, horizontalSizeClass == .regular ? LayoutTokens.iPadScreenHorizontal : LayoutTokens.screenHorizontal)
+                .padding(.top, horizontalSizeClass == .regular ? 24 : 8)
                 .padding(.bottom, 24)
-                .frame(maxWidth: LayoutTokens.readableMaxWidth)
+                .frame(maxWidth: horizontalSizeClass == .regular ? LayoutTokens.iPadReadableMaxWidth : LayoutTokens.readableMaxWidth)
                 .frame(maxWidth: .infinity)
             }
         }

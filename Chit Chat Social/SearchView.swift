@@ -80,6 +80,7 @@ struct SearchView: View {
                     .foregroundStyle(BrandPalette.adaptiveTextPrimary(for: colorScheme))
                     .padding(.horizontal, LayoutTokens.screenHorizontal)
                     .padding(.top, 10)
+                    .iPadAdaptiveColumn()
                 }
             }
             .navigationTitle(appState.mode == .social ? "Search" : "Market")

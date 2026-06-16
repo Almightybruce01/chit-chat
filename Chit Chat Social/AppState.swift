@@ -4498,6 +4498,17 @@ final class AppState: ObservableObject {
 #endif
     }
 
+    /// Whether the signed-in account uses email/password (needs password to delete).
+    var currentAccountUsesPasswordProvider: Bool {
+#if canImport(FirebaseAuth)
+        if let user = Auth.auth().currentUser {
+            return user.providerData.contains { $0.providerID == EmailAuthProviderID }
+        }
+#endif
+        let key = currentUser.username.lowercased()
+        return localCredentials[key] != nil
+    }
+
     func endSession() {
         session = nil
         UserDefaults.standard.removeObject(forKey: sessionStorageKey)
@@ -4508,6 +4519,133 @@ final class AppState: ObservableObject {
         try? Auth.auth().signOut()
 #endif
         currentUser = Self.makeGuestUserProfile()
+    }
+
+    /// Permanently deletes the signed-in account (Guideline 5.1.1(v)).
+    func deleteCurrentAccount(password: String?) async -> String? {
+        let usernameKey = currentUser.username.lowercased()
+        guard !usernameKey.isEmpty, usernameKey != "guest" else {
+            return "No account is signed in."
+        }
+        let profileId = currentUser.id
+        let storedUID = currentUser.firebaseUserId
+
+#if canImport(FirebaseAuth) && canImport(FirebaseFirestore)
+        if let user = Auth.auth().currentUser {
+            let usesPassword = user.providerData.contains { $0.providerID == EmailAuthProviderID }
+            if usesPassword {
+                let trimmedPassword = (password ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                guard trimmedPassword.count >= 8 else {
+                    return "Enter your password to permanently delete this account."
+                }
+                let email = (user.email ?? currentUser.accountEmail).trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !email.isEmpty else { return "Missing account email for verification." }
+                do {
+                    let credential = EmailAuthProvider.credential(withEmail: email, password: trimmedPassword)
+                    try await user.reauthenticate(with: credential)
+                } catch {
+                    return "Password verification failed. Check your password and try again."
+                }
+            }
+
+            let db = Firestore.firestore()
+            let uid = user.uid
+            if !usernameKey.isEmpty {
+                try? await db.collection(ChitChatFirestoreSchema.Collection.usernames)
+                    .document(usernameKey)
+                    .delete()
+            }
+            try? await db.collection(ChitChatFirestoreSchema.Collection.users)
+                .document(uid)
+                .delete()
+
+            do {
+                try await user.delete()
+            } catch let error as NSError {
+                if error.domain == AuthErrorDomain,
+                   error.code == AuthErrorCode.requiresRecentLogin.rawValue {
+                    return "For security, sign out, sign in again, then return to Delete account."
+                }
+                return error.localizedDescription
+            }
+        } else if !storedUID.isEmpty, !storedUID.hasPrefix("local_") {
+            let db = Firestore.firestore()
+            if !usernameKey.isEmpty {
+                try? await db.collection(ChitChatFirestoreSchema.Collection.usernames)
+                    .document(usernameKey)
+                    .delete()
+            }
+            try? await db.collection(ChitChatFirestoreSchema.Collection.users)
+                .document(storedUID)
+                .delete()
+        }
+#else
+        if let storedPassword = localCredentials[usernameKey] {
+            let trimmedPassword = (password ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmedPassword == storedPassword else {
+                return "Enter your password to permanently delete this account."
+            }
+        }
+#endif
+
+        purgeLocalAccountArtifacts(usernameKey: usernameKey, profileId: profileId)
+        endSession()
+        return nil
+    }
+
+    private func purgeLocalAccountArtifacts(usernameKey: String, profileId: UUID) {
+        verificationRequests.removeAll { $0.username.lowercased() == usernameKey }
+        saveVerificationRequests()
+        internalUsers.removeAll { $0.id == profileId || $0.username.lowercased() == usernameKey }
+        localCredentials.removeValue(forKey: usernameKey)
+        saveCredentials()
+        loggedInAccountUsernames.removeAll { $0.lowercased() == usernameKey }
+        saveLoggedInAccounts()
+        UserDefaults.standard.removeObject(forKey: pendingPasswordResetStorageKey(usernameKey: usernameKey))
+        UserDefaults.standard.removeObject(forKey: passwordResetUserRatePrefix + usernameKey)
+        UserDefaults.standard.removeObject(forKey: passwordResetLockPrefix + usernameKey)
+
+        profilePhotoByUsername.removeValue(forKey: usernameKey)
+        profileGIFByUsername.removeValue(forKey: usernameKey)
+        profileLoopVideoByUsername.removeValue(forKey: usernameKey)
+        profileStoryImageByUsername.removeValue(forKey: usernameKey)
+        profileStoryVideoByUsername.removeValue(forKey: usernameKey)
+        profileStoryGIFByUsername.removeValue(forKey: usernameKey)
+
+        let scopedPrefixes = [
+            profilePhotoStoragePrefix,
+            profileGifStoragePrefix,
+            profileLoopVideoStoragePrefix,
+            profileStoryImageStoragePrefix,
+            profileStoryVideoStoragePrefix,
+            profileStoryGifStoragePrefix,
+            savedPostsStoragePrefix,
+            storySeenStoragePrefix,
+            profileQuoteStoragePrefix,
+            profileQuoteVisibilityStoragePrefix,
+            profileModeStateStoragePrefix,
+            interestStateStoragePrefix,
+            reelCollectionStoragePrefix,
+            exploreSignalStoragePrefix,
+            engagementStoragePrefix,
+            superFeatureSelectionStoragePrefix,
+            executionQueueProgressStoragePrefix,
+            executionQueueSnapshotStoragePrefix,
+            executionQueueLockStoragePrefix,
+            executionQueueLastSnapshotDayStoragePrefix,
+            executionQueueRestorePointStoragePrefix,
+            scheduledPostsStoragePrefix,
+            analyticsSnapshotsStoragePrefix
+        ]
+        for prefix in scopedPrefixes {
+            UserDefaults.standard.removeObject(forKey: "\(prefix)\(usernameKey)")
+        }
+
+        posts.removeAll { $0.authorHandle.caseInsensitiveCompare(currentUser.handle) == .orderedSame }
+        savedPostIDs.removeAll()
+        let username = currentUser.username
+        ReservedHandles.removeAdminHeldUsername(username)
+        ReservedHandles.setHandoffEmail(forUsername: username, email: "")
     }
 
     func validateBusinessRegistration(_ registration: BusinessRegistration) -> String? {

@@ -67,8 +67,9 @@ struct ProfileView: View {
                         }
                     }
                         .padding(.top, 4)
-                        .frame(maxWidth: LayoutTokens.readableMaxWidth)
+                        .frame(maxWidth: horizontalSizeClass == .regular ? LayoutTokens.iPadReadableMaxWidth : LayoutTokens.readableMaxWidth)
                         .frame(maxWidth: .infinity)
+                        .padding(.horizontal, horizontalSizeClass == .regular ? LayoutTokens.iPadScreenHorizontal : 0)
                 }
                 .scrollIndicators(.visible)
                 .contentMargins(.bottom, 28, for: .scrollContent)
@@ -570,6 +571,17 @@ struct ProfileView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .padding(.horizontal)
+
+                NavigationLink {
+                    DeleteAccountView()
+                        .environmentObject(appState)
+                } label: {
+                    Label("Delete account", systemImage: "person.crop.circle.badge.minus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
                 .padding(.horizontal)
 
                 if appState.currentUser.isBusinessAccount {

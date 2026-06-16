@@ -11,6 +11,7 @@ import UIKit
 struct MainTabView: View {
     @EnvironmentObject private var appState: AppState
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @StateObject private var permissionManager = AppPermissionManager()
     @AppStorage("hasRequestedCorePermissions") private var hasRequestedCorePermissions = false
     @State private var selectedTab = 0
@@ -35,6 +36,7 @@ struct MainTabView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .iPadAdaptiveColumn()
         .id("\(appState.mode.rawValue)-tab-\(selectedTab)")
         .environmentObject(permissionManager)
         .id(appState.mode)
@@ -74,9 +76,10 @@ struct MainTabView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if shouldShowCustomTabBar {
                 customTabBar
-                    .padding(.top, 8)
-                    .padding(.bottom, 6)
-                    .padding(.horizontal, 14)
+                    .iPadAdaptiveTabBar()
+                    .padding(.top, horizontalSizeClass == .regular ? 12 : 8)
+                    .padding(.bottom, horizontalSizeClass == .regular ? 10 : 6)
+                    .padding(.horizontal, horizontalSizeClass == .regular ? LayoutTokens.iPadScreenHorizontal : 14)
                     .allowsHitTesting(true)
             }
         }
@@ -244,8 +247,8 @@ struct MainTabView: View {
             }
             profileTabBarButton
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 7)
+        .padding(.horizontal, horizontalSizeClass == .regular ? 16 : 8)
+        .padding(.vertical, horizontalSizeClass == .regular ? 10 : 7)
         .background(
             ZStack {
                 RoundedRectangle(cornerRadius: LayoutTokens.tabBarRadius, style: .continuous).fill(tabBarBackgroundFill)

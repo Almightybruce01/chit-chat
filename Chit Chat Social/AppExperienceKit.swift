@@ -62,6 +62,52 @@ extension View {
     }
 }
 
+// MARK: - iPad layout (Guideline 4 — readable, centered, uncrowded)
+
+struct IPadAdaptiveColumnModifier: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    var maxWidth: CGFloat = LayoutTokens.iPadReadableMaxWidth
+    var horizontalPadding: CGFloat = LayoutTokens.iPadScreenHorizontal
+
+    func body(content: Content) -> some View {
+        if horizontalSizeClass == .regular {
+            content
+                .frame(maxWidth: maxWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, horizontalPadding)
+        } else {
+            content
+        }
+    }
+}
+
+struct IPadTabBarModifier: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    func body(content: Content) -> some View {
+        if horizontalSizeClass == .regular {
+            content
+                .frame(maxWidth: LayoutTokens.iPadTabBarMaxWidth)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, LayoutTokens.iPadScreenHorizontal)
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    /// Centers primary content in a wider, readable column on iPad.
+    func iPadAdaptiveColumn(maxWidth: CGFloat = LayoutTokens.iPadReadableMaxWidth) -> some View {
+        modifier(IPadAdaptiveColumnModifier(maxWidth: maxWidth))
+    }
+
+    /// Prevents the custom tab bar from stretching into tiny edge targets on iPad.
+    func iPadAdaptiveTabBar() -> some View {
+        modifier(IPadTabBarModifier())
+    }
+}
+
 // MARK: - Home hero
 
 /// Top-of-home context: greeting, locality, manual refresh (discoverability).

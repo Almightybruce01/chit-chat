@@ -100,7 +100,7 @@ struct HomeView: View {
                     .padding(.horizontal, LayoutTokens.screenHorizontal)
                     .padding(.top, 10)
                     .padding(.bottom, 28)
-                    .readableContentWidth()
+                    .iPadAdaptiveColumn()
                 }
             }
             .navigationTitle("Home")

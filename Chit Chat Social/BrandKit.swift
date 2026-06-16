@@ -49,6 +49,11 @@ enum LayoutTokens {
     static let minTouchTarget: CGFloat = 44
     /// Max width for primary reading column on iPad / large phones in landscape.
     static let readableMaxWidth: CGFloat = 560
+    /// Wider comfortable column on iPad regular width.
+    static let iPadReadableMaxWidth: CGFloat = 720
+    static let iPadScreenHorizontal: CGFloat = 40
+    /// Keeps tab bar controls large enough on iPad instead of stretching edge-to-edge.
+    static let iPadTabBarMaxWidth: CGFloat = 560
 }
 
 enum TypeTokens {
