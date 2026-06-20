@@ -129,9 +129,14 @@ struct VerificationView: View {
         }
         .navigationTitle("Verification")
         .task {
-            await storeKit.loadProducts()
+            await storeKit.loadProductsIfNeeded()
             await storeKit.refreshPurchasedProducts()
             appState.syncPaidVerificationEntitlement(active: storeKit.hasPaidVerification)
+        }
+        .onChange(of: storeKit.productLoadState) { _, state in
+            if case .unavailable = state {
+                Task { await storeKit.loadProductsIfNeeded() }
+            }
         }
         .onChange(of: storeKit.hasPaidVerification) { _, active in
             appState.syncPaidVerificationEntitlement(active: active)

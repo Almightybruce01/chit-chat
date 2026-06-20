@@ -118,12 +118,17 @@ Apple needs a way to review **sign-in** and **main flows**.
 
 ### A. Demo account for reviewers (most important)
 
-In **App Store Connect** → your app → **App Information** (or version) → **App Review Information**:
+Use the **built-in App Review demo** (auto-created in Firebase on first launch). Paste these into **App Store Connect** → **App Review Information**:
 
-- **Sign-in required?** Yes, if users must log in.  
-- **User name** / **Password:** a **dedicated** reviewer-only account (not your personal Apple ID).  
-  - Example: `reviewer+chitchatsocial@yourdomain.com` with a strong password you control.  
-- **Notes:** Short path: tap Sign in → email/password (or Apple/Google). Mention any **2FA** exceptions (review accounts should avoid 2FA if possible, or document backup codes in private notes only if Apple allows).
+| Field | Value |
+|--------|--------|
+| **Email** | `appreview.demo@chitchatsocial.review` |
+| **Password** | `ChitChatReview1!` |
+| **Username** | `appreview_demo` (@appreview_demo) |
+
+Do **not** use your personal account for review. The demo account survives the in-app delete flow (reviewers can sign in again with the same credentials).
+
+In **App Store Connect** → your app → **App Review Information**:
 
 **Review notes template** (paste and customize):
 
@@ -131,10 +136,12 @@ In **App Store Connect** → your app → **App Information** (or version) → *
 App: Chit Chat Social
 
 Demo account for review:
-Email: [YOUR_REVIEW_EMAIL]
-Password: [YOUR_REVIEW_PASSWORD]
+Email: appreview.demo@chitchatsocial.review
+Password: ChitChatReview1!
+Username: appreview_demo
 
 Flows to test: sign in → home feed → create post (optional) → profile → messages (if enabled).
+Account deletion: Profile → Settings & account tools → Delete account (demo login is preserved for re-sign-in).
 
 Sign in with Apple / Google: [enabled or not — if enabled, still provide email/password demo if available].
 

@@ -54,6 +54,7 @@ firebase/.firebase/
 ops/daily_company/dashboard-worker/.dev.vars
 # Firebase — download from Firebase Console → Project settings → Your apps
 Chit Chat Social/GoogleService-Info.plist
+Chit Chat Social/GoogleSignIn-Info.plist
 
 # Private Worker URL for Safari webloc sync (see config/DASHBOARD_BOOKMARK_URL.example)
 config/DASHBOARD_BOOKMARK_URL

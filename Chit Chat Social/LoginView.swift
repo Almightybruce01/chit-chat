@@ -302,8 +302,12 @@ struct LoginView: View {
                         authButtonLabel(title: "Continue with Google", icon: "globe")
                     }
                     .buttonStyle(SnappyScaleButtonStyle())
+                    .disabled(thirdPartyAuthDisabled)
+                    .opacity(thirdPartyAuthDisabled ? 0.45 : 1)
                     if !thirdPartyAuthDisabled {
-                        Text("Google may share your email with Firebase. Phone stays a placeholder until you add it in Profile.")
+                        Text(authMode == .logIn
+                            ? "Use your Google account — no @handle required on login."
+                            : "Google may share your email with Firebase. Phone stays a placeholder until you add it in Profile.")
                             .font(.caption2)
                             .foregroundStyle(secondaryText)
                             .multilineTextAlignment(.center)
@@ -323,12 +327,18 @@ struct LoginView: View {
                                 case .success(let auth):
                                     handleAppleLogin(auth: auth)
                                 case .failure(let error):
+                                    let ns = error as NSError
+                                    if ns.domain == ASAuthorizationError.errorDomain,
+                                       ns.code == ASAuthorizationError.canceled.rawValue {
+                                        return
+                                    }
                                     presentAuthError("Apple sign-in failed: \(error.localizedDescription)")
                                 }
                             }
                         )
                         .signInWithAppleButtonStyle(colorScheme == .light ? .black : .white)
                         .frame(height: LayoutTokens.minTouchTarget)
+                        .frame(maxWidth: 375)
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .allowsHitTesting(!thirdPartyAuthDisabled)
                         if thirdPartyAuthDisabled {
@@ -337,20 +347,16 @@ struct LoginView: View {
                                 .frame(height: LayoutTokens.minTouchTarget)
                                 .contentShape(Rectangle())
                                 .onTapGesture {
-                                    if usernameForOAuthUnset {
-                                        if authMode == .logIn {
-                                            presentAppleGoogleHandleReminder()
-                                        } else {
-                                            presentAuthError("Choose a unique @handle above, then sign in with Apple.")
-                                        }
-                                    } else if authMode == .signUp && accountPortal == .business {
+                                    if authMode == .signUp && accountPortal == .business {
                                         presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
                                     }
                                 }
                         }
                     }
                     if !thirdPartyAuthDisabled {
-                        Text("Apple may hide your email—we save a placeholder and your real one if Apple shares it; add phone in Profile.")
+                        Text(authMode == .logIn
+                            ? "Use your Apple ID — no @handle required on login."
+                            : "Apple may hide your email—we save a placeholder and your real one if Apple shares it; add phone in Profile.")
                             .font(.caption2)
                             .foregroundStyle(secondaryText)
                             .multilineTextAlignment(.center)
@@ -608,26 +614,32 @@ struct LoginView: View {
     private var oauthBridgeCard: some View {
         EliteSectionCard {
             VStack(alignment: .leading, spacing: 12) {
-                FuturisticSectionHeader(
-                    title: "Apple or Google",
-                    subtitle: authMode == .signUp
-                        ? "Choose a unique @handle, or leave blank and Sign in with Apple will assign one for you."
-                        : "Enter your public @handle below, then use Google or Sign in with Apple.",
-                    showAccentBar: true
-                )
-                TextField(authMode == .signUp ? "@handle (optional for Apple)" : "Your @handle", text: $username)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding(10)
-                    .background(
-                        BrandPalette.adaptiveCardBg(for: colorScheme).opacity(colorScheme == .light ? 0.65 : 0.55)
+                if authMode == .signUp {
+                    FuturisticSectionHeader(
+                        title: "Apple or Google",
+                        subtitle: "Choose a unique @handle, or leave blank and Sign in with Apple will assign one for you.",
+                        showAccentBar: true
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-                    .foregroundStyle(primaryText)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme).opacity(0.9), lineWidth: 1)
+                    TextField("@handle (optional for Apple)", text: $username)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .padding(10)
+                        .background(
+                            BrandPalette.adaptiveCardBg(for: colorScheme).opacity(colorScheme == .light ? 0.65 : 0.55)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        .foregroundStyle(primaryText)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                .stroke(BrandPalette.adaptiveGlassStroke(for: colorScheme).opacity(0.9), lineWidth: 1)
+                        )
+                } else {
+                    FuturisticSectionHeader(
+                        title: "Apple or Google",
+                        subtitle: "Tap below to sign in — your @handle is loaded from your account automatically.",
+                        showAccentBar: true
                     )
+                }
             }
             .padding(.vertical, -2)
         }
@@ -652,10 +664,7 @@ struct LoginView: View {
     }
 
     private var thirdPartyAuthDisabled: Bool {
-        if authMode == .signUp && accountPortal == .business { return true }
-        if authMode == .logIn { return usernameForOAuthUnset }
-        // Sign-up + creator: Apple may auto-assign @handle when blank.
-        return false
+        authMode == .signUp && accountPortal == .business
     }
 
     private var usernameForOAuthUnset: Bool {
@@ -741,9 +750,7 @@ struct LoginView: View {
             presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
             return
         }
-        if authMode == .logIn {
-            guard applyUsernameFromInput(isSignUp: false) else { return }
-        } else if !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if authMode == .signUp, !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             guard applyUsernameFromInput(isSignUp: true) else { return }
         }
         appState.wantsProductUpdateEmails = wantsUpdateEmails
@@ -753,63 +760,59 @@ struct LoginView: View {
         }
 
         let config = GIDConfiguration(clientID: clientID)
+        GIDSignIn.sharedInstance.configuration = config
 
         guard let rootVC = oauthTopViewController() else {
             presentAuthError("Could not open Google sign-in on this device. Close other sheets and try again, or use email login below.")
             return
         }
 
-        GIDSignIn.sharedInstance.configuration = config
         GIDSignIn.sharedInstance.signIn(withPresenting: rootVC) { result, error in
-            if let error = error {
-                presentAuthError("Google sign-in failed: \(error.localizedDescription)")
-                return
-            }
-
-            guard let user = result?.user,
-                  let idToken = user.idToken?.tokenString else {
-                presentAuthError("Missing Google ID token.")
-                return
-            }
-
-            let accessToken = user.accessToken.tokenString
-            let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
-
-            Auth.auth().signIn(with: credential) { result, error in
-                Task { @MainActor in
-                    if let error = error {
-                        presentAuthError("Firebase Google sign-in error: \(error.localizedDescription)")
+            Task { @MainActor in
+                if let error = error {
+                    let ns = error as NSError
+                    if ns.domain == GIDSignInError.errorDomain,
+                       ns.code == GIDSignInError.Code.canceled.rawValue {
                         return
                     }
-                    guard let user = result?.user else {
-                        presentAuthError("Google sign-in did not return a user profile.")
-                        return
-                    }
-                    let isNewFirebaseUser = result?.additionalUserInfo?.isNewUser ?? false
-                    saveUserToFirestore(user: user, provider: "google.com")
-                    var resolved = username.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if authMode == .signUp, resolved.isEmpty {
-                        let emailLocal = user.email?.split(separator: "@").first.map(String.init) ?? "google"
-                        resolved = appState.suggestUniqueUsername(base: emailLocal)
-                        username = resolved
-                    } else if let cleaned = appState.cleanedUsername(from: resolved) {
-                        resolved = cleaned
-                    } else {
-                        presentAuthError("Enter a valid @handle before continuing with Google.")
-                        return
-                    }
+                    presentAuthError("Google sign-in failed: \(error.localizedDescription)")
+                    return
+                }
+
+                guard let user = result?.user,
+                      let idToken = user.idToken?.tokenString else {
+                    presentAuthError("Missing Google ID token.")
+                    return
+                }
+
+                let accessToken = user.accessToken.tokenString
+                let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: accessToken)
+
+                do {
+                    let authResult = try await Auth.auth().signIn(with: credential)
+                    let firebaseUser = authResult.user
+                    let isNewFirebaseUser = authResult.additionalUserInfo?.isNewUser ?? false
+                    saveUserToFirestore(user: firebaseUser, provider: "google.com")
+                    await appState.hydrateProfileFromFirestoreForCurrentFirebaseUser()
+                    let resolved = resolvedUsernameAfterOAuth(
+                        firebaseUser: firebaseUser,
+                        appleCredential: nil
+                    )
                     appState.markVerificationEmailSent()
                     if let error = appState.completeProviderLogin(
                         username: resolved,
                         provider: "google.com",
-                        accountEmailFromProvider: user.email,
+                        accountEmailFromProvider: firebaseUser.email,
                         isNewSignUp: authMode == .signUp,
                         isNewFirebaseUser: isNewFirebaseUser
                     ) {
                         presentAuthError(error)
                     } else {
+                        username = appState.currentUser.username
                         applyPortalProfileDefaults()
                     }
+                } catch {
+                    presentAuthError("Firebase Google sign-in error: \(error.localizedDescription)")
                 }
             }
         }
@@ -820,16 +823,11 @@ struct LoginView: View {
             presentAuthError("Business registration requires email and password so we can store your EIN and business address securely.")
             return
         }
+        appState.wantsProductUpdateEmails = wantsUpdateEmails
         guard let appleIDCredential = auth.credential as? ASAuthorizationAppleIDCredential else {
             presentAuthError("Invalid Apple credentials.")
             return
         }
-        guard let resolvedUsername = resolveOAuthUsername(
-            appleCredential: appleIDCredential,
-            isSignUp: authMode == .signUp
-        ) else { return }
-
-        appState.wantsProductUpdateEmails = wantsUpdateEmails
         guard let tokenData = appleIDCredential.identityToken,
               let idTokenString = String(data: tokenData, encoding: .utf8) else {
             presentAuthError("Failed to get Apple ID token.")
@@ -846,31 +844,33 @@ struct LoginView: View {
             rawNonce: nonce
         )
 
-        Auth.auth().signIn(with: credential) { result, error in
-            Task { @MainActor in
-                defer { currentNonce = nil }
-                if let error = error {
-                    presentAuthError(friendlyAppleFirebaseError(error))
-                    return
-                }
-                guard let user = result?.user else {
-                    presentAuthError("Apple sign-in did not return a user profile.")
-                    return
-                }
-                let isNewFirebaseUser = result?.additionalUserInfo?.isNewUser ?? false
-                saveUserToFirestore(user: user, provider: "apple.com")
+        Task { @MainActor in
+            defer { currentNonce = nil }
+            do {
+                let authResult = try await Auth.auth().signIn(with: credential)
+                let firebaseUser = authResult.user
+                let isNewFirebaseUser = authResult.additionalUserInfo?.isNewUser ?? false
+                saveUserToFirestore(user: firebaseUser, provider: "apple.com")
+                await appState.hydrateProfileFromFirestoreForCurrentFirebaseUser()
+                let resolved = resolvedUsernameAfterOAuth(
+                    firebaseUser: firebaseUser,
+                    appleCredential: appleIDCredential
+                )
                 appState.markVerificationEmailSent()
                 if let error = appState.completeProviderLogin(
-                    username: resolvedUsername,
+                    username: resolved,
                     provider: "apple.com",
-                    accountEmailFromProvider: user.email ?? appleIDCredential.email,
+                    accountEmailFromProvider: firebaseUser.email ?? appleIDCredential.email,
                     isNewSignUp: authMode == .signUp,
                     isNewFirebaseUser: isNewFirebaseUser
                 ) {
                     presentAuthError(error)
                 } else {
+                    username = appState.currentUser.username
                     applyPortalProfileDefaults()
                 }
+            } catch {
+                presentAuthError(friendlyAppleFirebaseError(error))
             }
         }
     }
@@ -903,6 +903,27 @@ struct LoginView: View {
         return success
     }
 
+    private func resolvedUsernameAfterOAuth(
+        firebaseUser: User,
+        appleCredential: ASAuthorizationAppleIDCredential?
+    ) -> String {
+        let hydrated = appState.currentUser.username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !hydrated.isEmpty, hydrated.lowercased() != "guest" {
+            return hydrated
+        }
+        let typed = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !typed.isEmpty, let cleaned = appState.cleanedUsername(from: typed) {
+            return cleaned
+        }
+        if authMode == .signUp, let apple = appleCredential {
+            let emailLocal = apple.email?.split(separator: "@").first.map(String.init)
+            let appleBase = emailLocal ?? "apple\(apple.user.suffix(6))"
+            return appState.suggestUniqueUsername(base: appleBase)
+        }
+        let emailLocal = firebaseUser.email?.split(separator: "@").first.map(String.init) ?? "user"
+        return appState.suggestUniqueUsername(base: String(emailLocal))
+    }
+
     private func resolveOAuthUsername(
         appleCredential: ASAuthorizationAppleIDCredential?,
         isSignUp: Bool
@@ -919,8 +940,6 @@ struct LoginView: View {
         if raw.isEmpty {
             if isSignUp {
                 presentAuthError("Enter a unique @handle above, or leave it blank and Sign in with Apple will assign one.")
-            } else {
-                presentAppleGoogleHandleReminder()
             }
             return nil
         }
@@ -1035,14 +1054,6 @@ struct LoginView: View {
         }
     }
 
-    private func presentAppleGoogleHandleReminder() {
-        Task { @MainActor in
-            authAlertTitle = "Add your public @handle"
-            providerMessage = "Enter your unique @handle in the Apple or Google card above, then tap Sign in with Apple again."
-            showingProviderAlert = true
-        }
-    }
-
     private func presentAuthError(_ message: String) {
         Task { @MainActor in
             authAlertTitle = "Couldn't sign you in"
@@ -1087,14 +1098,23 @@ struct LoginView: View {
 
 private func oauthKeyWindow() -> UIWindow? {
     let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
-    let foreground = scenes.filter { $0.activationState == .foregroundActive }
-    if let win = foreground.flatMap(\.windows).first(where: { $0.isKeyWindow }) {
-        return win
+    let ordered = scenes.sorted { lhs, rhs in
+        func rank(_ scene: UIWindowScene) -> Int {
+            switch scene.activationState {
+            case .foregroundActive: return 0
+            case .foregroundInactive: return 1
+            case .background: return 2
+            default: return 3
+            }
+        }
+        return rank(lhs) < rank(rhs)
     }
-    if let win = scenes.flatMap(\.windows).first(where: { $0.isKeyWindow }) {
-        return win
+    for scene in ordered {
+        if let win = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first(where: { !$0.isHidden }) {
+            return win
+        }
     }
-    return scenes.flatMap(\.windows).first
+    return nil
 }
 
 private func oauthTopMost(from root: UIViewController) -> UIViewController {

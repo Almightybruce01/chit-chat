@@ -4380,9 +4380,6 @@ final class AppState: ObservableObject {
         isNewSignUp: Bool = false,
         isNewFirebaseUser: Bool = false
     ) -> String? {
-        guard var cleaned = normalizedUsername(from: username) else {
-            return "Enter a valid unique username (3+ chars, letters/numbers/._)."
-        }
         let providerEmail = (accountEmailFromProvider ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
 #if canImport(FirebaseAuth)
         let firebaseUid = Auth.auth().currentUser?.uid
@@ -4398,6 +4395,28 @@ final class AppState: ObservableObject {
             return nil
         }
 #endif
+
+        var usernameInput = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        if usernameInput.isEmpty || usernameInput.lowercased() == "guest" {
+            let existing = currentUser.username.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !existing.isEmpty, existing.lowercased() != "guest" {
+                usernameInput = existing
+            } else {
+#if canImport(FirebaseAuth)
+                let firebaseEmail = Auth.auth().currentUser?.email
+#else
+                let firebaseEmail: String? = nil
+#endif
+                let emailBase = providerEmail.split(separator: "@").first.map(String.init)
+                    ?? firebaseEmail?.split(separator: "@").first.map(String.init)
+                    ?? "user"
+                usernameInput = suggestUniqueUsername(base: emailBase)
+            }
+        }
+
+        guard var cleaned = normalizedUsername(from: usernameInput) else {
+            return "Enter a valid unique username (3+ chars, letters/numbers/._)."
+        }
 
         if let idx = internalUsers.firstIndex(where: { $0.username.caseInsensitiveCompare(cleaned) == .orderedSame }) {
             let existing = internalUsers[idx]
@@ -4548,6 +4567,15 @@ final class AppState: ObservableObject {
                 }
             }
 
+            if AppReviewDemoAccount.shouldPreserveServerAccount(
+                username: usernameKey,
+                accountEmail: currentUser.accountEmail,
+                firebaseEmail: user.email
+            ) {
+                endSession()
+                return nil
+            }
+
             let db = Firestore.firestore()
             let uid = user.uid
             if !usernameKey.isEmpty {
@@ -4569,6 +4597,14 @@ final class AppState: ObservableObject {
                 return error.localizedDescription
             }
         } else if !storedUID.isEmpty, !storedUID.hasPrefix("local_") {
+            if AppReviewDemoAccount.shouldPreserveServerAccount(
+                username: usernameKey,
+                accountEmail: currentUser.accountEmail,
+                firebaseEmail: nil
+            ) {
+                endSession()
+                return nil
+            }
             let db = Firestore.firestore()
             if !usernameKey.isEmpty {
                 try? await db.collection(ChitChatFirestoreSchema.Collection.usernames)
@@ -4585,6 +4621,14 @@ final class AppState: ObservableObject {
             guard trimmedPassword == storedPassword else {
                 return "Enter your password to permanently delete this account."
             }
+        }
+        if AppReviewDemoAccount.shouldPreserveServerAccount(
+            username: usernameKey,
+            accountEmail: currentUser.accountEmail,
+            firebaseEmail: nil
+        ) {
+            endSession()
+            return nil
         }
 #endif
 
@@ -5691,6 +5735,7 @@ extension AppState {
             }
         }
         reconcileFirebaseOnColdLaunch()
+        Task { await AppReviewDemoAccount.ensureProvisionedIfNeeded() }
     }
 
     private func handleFirebaseAuthStateChange(_ user: User?) {

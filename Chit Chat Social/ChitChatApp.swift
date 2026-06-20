@@ -8,6 +8,7 @@
 import SwiftUI
 import FirebaseCore
 import UIKit
+import GoogleSignIn
 
 @main
 struct ChitChatApp: App {
@@ -23,10 +24,17 @@ struct ChitChatApp: App {
                 .environmentObject(appState)
                 .environment(\.storeKit, storeKit)
                 .preferredColorScheme(preferredColorScheme)
+                .onOpenURL { url in
+                    _ = GoogleSignInBootstrap.handle(url)
+                }
                 .onChange(of: scenePhase) { _, phase in
                     if phase == .active {
                         appState.captureExecutionCompletionSnapshotIfNeededDaily()
+                        Task { await storeKit.loadProductsIfNeeded() }
                     }
+                }
+                .task {
+                    await storeKit.loadProductsIfNeeded()
                 }
         }
     }
@@ -52,9 +60,18 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             // Skip Firebase Analytics / measurement by default.
             UserDefaults.standard.set(false, forKey: "FIREBASE_ANALYTICS_COLLECTION_ENABLED")
             FirebaseApp.configure()
+            GoogleSignInBootstrap.configureIfNeeded()
         }
         styleGlobalAppearance()
         return true
+    }
+
+    func application(
+        _ app: UIApplication,
+        open url: URL,
+        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
+    ) -> Bool {
+        GoogleSignInBootstrap.handle(url)
     }
 
     private func styleGlobalAppearance() {

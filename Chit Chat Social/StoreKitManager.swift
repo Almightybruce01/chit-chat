@@ -62,25 +62,39 @@ final class StoreKitManager: ObservableObject {
         return "Paid Verification Badge is not available from the App Store yet."
     }
 
+    func loadProductsIfNeeded() async {
+        if case .ready = productLoadState, paidVerificationProduct != nil { return }
+        await loadProducts()
+    }
+
     func loadProducts() async {
         productLoadState = .loading
         purchaseError = nil
-        do {
-            let fetched = try await Product.products(for: IAPProductID.all)
-            products = fetched
-            if fetched.contains(where: { $0.id == IAPProductID.paidVerification }) {
-                productLoadState = .ready
-            } else {
-                let message =
-                    "App Store did not return product \(IAPProductID.paidVerification). " +
-                    "In App Store Connect, set the IAP to Ready to Submit and attach it to version 1.0. " +
-                    "In Xcode Run scheme, set StoreKit Configuration to Products.storekit for local testing."
-                productLoadState = .unavailable(message)
+        let maxAttempts = 3
+        for attempt in 0..<maxAttempts {
+            do {
+                let fetched = try await Product.products(for: IAPProductID.all)
+                products = fetched
+                if fetched.contains(where: { $0.id == IAPProductID.paidVerification }) {
+                    productLoadState = .ready
+                    return
+                }
+            } catch {
+                if attempt == maxAttempts - 1 {
+                    productLoadState = .unavailable(error.localizedDescription)
+                    purchaseError = error.localizedDescription
+                    return
+                }
             }
-        } catch {
-            productLoadState = .unavailable(error.localizedDescription)
-            purchaseError = error.localizedDescription
+            if attempt < maxAttempts - 1 {
+                try? await Task.sleep(nanoseconds: UInt64(1_000_000_000 * (attempt + 1)))
+            }
         }
+        let message =
+            "Paid Verification Badge (\(IAPProductID.paidVerification)) is not available yet. " +
+            "Confirm the IAP is Ready to Submit in App Store Connect, attached to version 1.0, " +
+            "and that the Paid Apps Agreement is active."
+        productLoadState = .unavailable(message)
     }
 
     @discardableResult

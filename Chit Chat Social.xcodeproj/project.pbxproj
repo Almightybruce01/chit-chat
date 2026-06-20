@@ -110,6 +110,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = B7B598092E0AF472005FEA70 /* Build configuration list for PBXNativeTarget "Chit Chat Social" */;
 			buildPhases = (
+				B7C222222EAA000200AABBCC /* Generate Google Sign-In Info.plist */,
 				B7B597E42E0AF46E005FEA70 /* Sources */,
 				B7C111112EAA000100AABBCC /* Strip Extended Attributes */,
 				B7B597E52E0AF46E005FEA70 /* Frameworks */,
@@ -252,6 +253,24 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		B7C222222EAA000200AABBCC /* Generate Google Sign-In Info.plist */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Chit Chat Social/GoogleService-Info.plist",
+				"$(SRCROOT)/scripts/generate-google-signin-infoplist.sh",
+			);
+			name = "Generate Google Sign-In Info.plist";
+			outputPaths = (
+				"$(SRCROOT)/Chit Chat Social/GoogleSignIn-Info.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "bash \"${SRCROOT}/scripts/generate-google-signin-infoplist.sh\"\n";
+		};
 		B7C111112EAA000100AABBCC /* Strip Extended Attributes */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -441,11 +460,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COPYFILE_DISABLE = YES;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = VAWDYZ2B9U;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Chit Chat Social/GoogleSignIn-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Chit Chat Social";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is used for creating posts, reels, and live content.";
@@ -478,11 +498,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COPYFILE_DISABLE = YES;
-				CURRENT_PROJECT_VERSION = 17;
+				CURRENT_PROJECT_VERSION = 20;
 				DEVELOPMENT_TEAM = VAWDYZ2B9U;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Chit Chat Social/GoogleSignIn-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Chit Chat Social";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Camera is used for creating posts, reels, and live content.";
